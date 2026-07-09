@@ -14,13 +14,21 @@ export const Route = createFileRoute("/support")({
   }),
   head: () => ({
     meta: [
-      { title: "Support · Peptide Cooperative" },
+      { title: "Support — Certificate Checker" },
       {
         name: "description",
         content:
           "Support independent peptide testing through a monthly or yearly membership, a one-time donation, or by unlocking full registry access.",
       },
+      { property: "og:title", content: "Support — Certificate Checker" },
+      {
+        property: "og:description",
+        content: "Fund independent peptide testing. Membership, donations, and registry access.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/support" },
     ],
+    links: [{ rel: "canonical", href: "/support" }],
   }),
   component: SupportPage,
   errorComponent: ({ error, reset }) => (
