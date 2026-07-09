@@ -11,6 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BoardIndexRouteImport } from './routes/board.index'
+import { Route as RegistryItemIdRouteImport } from './routes/registry.$itemId'
+import { Route as BoardNominateRouteImport } from './routes/board.nominate'
+import { Route as BoardItemIdRouteImport } from './routes/board.$itemId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const AuthRoute = AuthRouteImport.update({
@@ -23,6 +27,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BoardIndexRoute = BoardIndexRouteImport.update({
+  id: '/board/',
+  path: '/board/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistryItemIdRoute = RegistryItemIdRouteImport.update({
+  id: '/registry/$itemId',
+  path: '/registry/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoardNominateRoute = BoardNominateRouteImport.update({
+  id: '/board/nominate',
+  path: '/board/nominate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoardItemIdRoute = BoardItemIdRouteImport.update({
+  id: '/board/$itemId',
+  path: '/board/$itemId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -33,30 +57,68 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/board/$itemId': typeof BoardItemIdRoute
+  '/board/nominate': typeof BoardNominateRoute
+  '/registry/$itemId': typeof RegistryItemIdRoute
+  '/board/': typeof BoardIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/board/$itemId': typeof BoardItemIdRoute
+  '/board/nominate': typeof BoardNominateRoute
+  '/registry/$itemId': typeof RegistryItemIdRoute
+  '/board': typeof BoardIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/board/$itemId': typeof BoardItemIdRoute
+  '/board/nominate': typeof BoardNominateRoute
+  '/registry/$itemId': typeof RegistryItemIdRoute
+  '/board/': typeof BoardIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/api/public/payments/webhook'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/board/$itemId'
+    | '/board/nominate'
+    | '/registry/$itemId'
+    | '/board/'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/api/public/payments/webhook'
-  id: '__root__' | '/' | '/auth' | '/api/public/payments/webhook'
+  to:
+    | '/'
+    | '/auth'
+    | '/board/$itemId'
+    | '/board/nominate'
+    | '/registry/$itemId'
+    | '/board'
+    | '/api/public/payments/webhook'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/board/$itemId'
+    | '/board/nominate'
+    | '/registry/$itemId'
+    | '/board/'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  BoardItemIdRoute: typeof BoardItemIdRoute
+  BoardNominateRoute: typeof BoardNominateRoute
+  RegistryItemIdRoute: typeof RegistryItemIdRoute
+  BoardIndexRoute: typeof BoardIndexRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -76,6 +138,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/board/': {
+      id: '/board/'
+      path: '/board'
+      fullPath: '/board/'
+      preLoaderRoute: typeof BoardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registry/$itemId': {
+      id: '/registry/$itemId'
+      path: '/registry/$itemId'
+      fullPath: '/registry/$itemId'
+      preLoaderRoute: typeof RegistryItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/board/nominate': {
+      id: '/board/nominate'
+      path: '/board/nominate'
+      fullPath: '/board/nominate'
+      preLoaderRoute: typeof BoardNominateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/board/$itemId': {
+      id: '/board/$itemId'
+      path: '/board/$itemId'
+      fullPath: '/board/$itemId'
+      preLoaderRoute: typeof BoardItemIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -89,6 +179,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  BoardItemIdRoute: BoardItemIdRoute,
+  BoardNominateRoute: BoardNominateRoute,
+  RegistryItemIdRoute: RegistryItemIdRoute,
+  BoardIndexRoute: BoardIndexRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
