@@ -28,6 +28,9 @@ export function SiteHeader() {
           <Link to="/board" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Board
           </Link>
+          <Link to="/support" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+            Support
+          </Link>
           {email ? (
             <button
               onClick={() => supabase.auth.signOut()}

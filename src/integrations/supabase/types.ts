@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_activity: {
+        Row: {
+          created_at: string | null
+          id: string
+          kind: string
+          message: string
+          meta: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          kind: string
+          message: string
+          meta?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          kind?: string
+          message?: string
+          meta?: Json | null
+        }
+        Relationships: []
+      }
       board_items: {
         Row: {
           created_at: string
@@ -189,6 +213,72 @@ export type Database = {
         }
         Relationships: []
       }
+      purchases: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          credited_to_fund: boolean
+          currency: string
+          environment: string
+          fund_credit_cents: number
+          id: string
+          kind: string
+          metadata: Json | null
+          net_cents: number | null
+          price_id: string | null
+          product_id: string
+          refunded_cents: number
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          credited_to_fund?: boolean
+          currency?: string
+          environment?: string
+          fund_credit_cents?: number
+          id?: string
+          kind: string
+          metadata?: Json | null
+          net_cents?: number | null
+          price_id?: string | null
+          product_id: string
+          refunded_cents?: number
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          credited_to_fund?: boolean
+          currency?: string
+          environment?: string
+          fund_credit_cents?: number
+          id?: string
+          kind?: string
+          metadata?: Json | null
+          net_cents?: number | null
+          price_id?: string | null
+          product_id?: string
+          refunded_cents?: number
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       results: {
         Row: {
           batch_id: string | null
@@ -248,6 +338,54 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          price_id: string
+          product_id: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          price_id: string
+          product_id: string
+          status?: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          price_id?: string
+          product_id?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -298,7 +436,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin"
+      app_role: "admin" | "supporter" | "registry_member"
       board_state:
         | "nominated"
         | "funding"
@@ -441,7 +579,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin"],
+      app_role: ["admin", "supporter", "registry_member"],
       board_state: [
         "nominated",
         "funding",
