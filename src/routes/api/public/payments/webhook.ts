@@ -1,71 +1,298 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
+import { verifyWebhook, type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 
 async function getAdmin() {
   const { createClient } = await import("@supabase/supabase-js");
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-async function handleEvent(event: { type: string; data: { object: any } }, env: StripeEnv) {
+// ------- Entitlement helpers -------
+
+async function grantRole(admin: any, userId: string, role: "supporter" | "registry_member") {
+  await admin.from("user_roles").upsert(
+    { user_id: userId, role },
+    { onConflict: "user_id,role", ignoreDuplicates: true },
+  );
+}
+async function revokeRole(admin: any, userId: string, role: "supporter" | "registry_member") {
+  await admin.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+}
+
+async function creditFund(admin: any, deltaCents: number, note: string, meta: any) {
+  if (!deltaCents) return;
+  // Read-modify-write; single-row table
+  const { data } = await admin.from("community_fund").select("total_cents").eq("id", true).single();
+  const current = Number(data?.total_cents ?? 0);
+  await admin
+    .from("community_fund")
+    .update({ total_cents: current + deltaCents, updated_at: new Date().toISOString() })
+    .eq("id", true);
+  await admin.from("admin_activity").insert({
+    kind: "fund_credit",
+    message: `${deltaCents >= 0 ? "Credited" : "Debited"} ${(deltaCents / 100).toFixed(2)} USD — ${note}`,
+    meta,
+  });
+}
+
+// ------- Subscription handlers -------
+
+function priceLookup(item: any): string | null {
+  return item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
+}
+
+async function upsertSubscription(subscription: any, env: StripeEnv) {
+  const admin = await getAdmin();
+  const userId = subscription.metadata?.userId;
+  if (!userId) {
+    console.warn("Subscription without userId metadata", subscription.id);
+    return;
+  }
+  const item = subscription.items?.data?.[0];
+  const priceId = priceLookup(item);
+  const productId = typeof item?.price?.product === "string"
+    ? item.price.product
+    : item?.price?.product?.id;
+  const periodStart = item?.current_period_start ?? subscription.current_period_start;
+  const periodEnd = item?.current_period_end ?? subscription.current_period_end;
+
+  await admin.from("subscriptions").upsert(
+    {
+      user_id: userId,
+      stripe_subscription_id: subscription.id,
+      stripe_customer_id: subscription.customer,
+      product_id: productId,
+      price_id: priceId,
+      status: subscription.status,
+      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+      environment: env,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "stripe_subscription_id" },
+  );
+
+  // Entitlement logic:
+  // active/trialing/past_due -> keep supporter role (past_due is dunning grace)
+  // canceled with future period_end -> keep until period ends
+  // otherwise -> revoke
+  const now = Date.now();
+  const activeStatuses = ["active", "trialing", "past_due"];
+  const stillPaid = periodEnd && periodEnd * 1000 > now;
+  const shouldGrant =
+    activeStatuses.includes(subscription.status) ||
+    (subscription.status === "canceled" && stillPaid);
+  if (shouldGrant) await grantRole(admin, userId, "supporter");
+  else await revokeRole(admin, userId, "supporter");
+
+  await admin.from("admin_activity").insert({
+    kind: "subscription",
+    message: `Subscription ${subscription.id} → ${subscription.status}`,
+    meta: { userId, priceId, cancel_at_period_end: subscription.cancel_at_period_end },
+  });
+}
+
+async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
+  const admin = await getAdmin();
+  await admin
+    .from("subscriptions")
+    .update({ status: "canceled", updated_at: new Date().toISOString() })
+    .eq("stripe_subscription_id", subscription.id)
+    .eq("environment", env);
+  const userId = subscription.metadata?.userId;
+  if (userId) {
+    await revokeRole(admin, userId, "supporter");
+    await admin.from("admin_activity").insert({
+      kind: "subscription",
+      message: `Subscription ${subscription.id} deleted; supporter role revoked`,
+      meta: { userId },
+    });
+  }
+}
+
+// ------- One-time purchase handling (donations, registry) -------
+
+async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stripeEnvKey: StripeEnv) {
+  // Pledge sessions live under board.functions and use `metadata.pledge_id` — keep that path.
+  const pledgeId = session.metadata?.pledge_id;
+  if (pledgeId) {
+    const admin = await getAdmin();
+    const paymentIntentId =
+      typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+    await admin
+      .from("pledges")
+      .update({
+        status: "authorized",
+        stripe_payment_intent_id: paymentIntentId ?? null,
+        environment: env,
+      })
+      .eq("id", pledgeId);
+    return;
+  }
+
+  // Subscription checkouts: the subscription.created event will handle entitlement.
+  if (session.mode !== "payment") return;
+
+  const userId = session.metadata?.userId;
+  const admin = await getAdmin();
+  const stripe = createStripeClient(stripeEnvKey);
+
+  // Expand line items to identify the product/price
+  const full = await stripe.checkout.sessions.retrieve(session.id, {
+    expand: ["line_items", "payment_intent.latest_charge.balance_transaction"],
+  });
+  const line = full.line_items?.data?.[0];
+  const priceObj: any = line?.price;
+  const priceLookupKey = priceObj?.lookup_key || priceObj?.metadata?.lovable_external_id || priceObj?.id || null;
+  const productId = typeof priceObj?.product === "string" ? priceObj.product : priceObj?.product?.id;
+
+  const pi: any = full.payment_intent;
+  const paymentIntentId = typeof pi === "string" ? pi : pi?.id;
+  const charge = typeof pi === "object" ? pi?.latest_charge : null;
+  const balanceTx: any = typeof charge === "object" ? charge?.balance_transaction : null;
+  const netCents = typeof balanceTx === "object" ? Number(balanceTx?.net ?? 0) : null;
+
+  const amount = Number(full.amount_total ?? 0);
+  let kind: "donation" | "registry" | "other" = "other";
+  if (productId === "community_donation" || String(priceLookupKey).startsWith("donate_")) kind = "donation";
+  else if (productId === "registry_access" || priceLookupKey === "registry_lifetime") kind = "registry";
+
+  await admin.from("purchases").upsert(
+    {
+      user_id: userId ?? null,
+      stripe_checkout_session_id: session.id,
+      stripe_payment_intent_id: paymentIntentId ?? null,
+      stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id,
+      product_id: productId ?? "unknown",
+      price_id: priceLookupKey,
+      kind,
+      amount_cents: amount,
+      net_cents: netCents,
+      currency: full.currency ?? "usd",
+      status: "succeeded",
+      environment: env,
+      metadata: { session_metadata: session.metadata },
+    },
+    { onConflict: "stripe_checkout_session_id" },
+  );
+
+  // Registry unlock: grant role
+  if (kind === "registry" && userId) {
+    await grantRole(admin, userId, "registry_member");
+    await admin.from("admin_activity").insert({
+      kind: "purchase",
+      message: `Registry access granted`,
+      meta: { userId, amount_cents: amount },
+    });
+  }
+
+  // Donations: credit the community fund (net of Stripe fees when available)
+  if (kind === "donation") {
+    const credit = netCents ?? amount;
+    await admin
+      .from("purchases")
+      .update({ credited_to_fund: true, fund_credit_cents: credit })
+      .eq("stripe_checkout_session_id", session.id);
+    await creditFund(admin, credit, "donation", { session_id: session.id, userId });
+  }
+}
+
+async function handleChargeRefunded(charge: any, env: StripeEnv) {
+  const admin = await getAdmin();
+  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  if (!pi) return;
+  const refunded = Number(charge.amount_refunded ?? 0);
+  const total = Number(charge.amount ?? 0);
+  const status = refunded >= total ? "refunded" : "partially_refunded";
+
+  const { data: purchase } = await admin
+    .from("purchases")
+    .select("id, user_id, kind, fund_credit_cents, credited_to_fund")
+    .eq("stripe_payment_intent_id", pi)
+    .eq("environment", env)
+    .maybeSingle();
+  if (!purchase) return;
+
+  await admin
+    .from("purchases")
+    .update({ status, refunded_cents: refunded, updated_at: new Date().toISOString() })
+    .eq("id", purchase.id);
+
+  // If fully refunded and registry, revoke access
+  if (status === "refunded" && purchase.kind === "registry" && purchase.user_id) {
+    await revokeRole(admin, purchase.user_id, "registry_member");
+  }
+  // If fully refunded and donation, subtract from fund
+  if (status === "refunded" && purchase.credited_to_fund && purchase.fund_credit_cents) {
+    await creditFund(admin, -Number(purchase.fund_credit_cents), "donation refund", {
+      purchase_id: purchase.id,
+    });
+  }
+  await admin.from("admin_activity").insert({
+    kind: "refund",
+    message: `Refund on ${pi} — ${status}`,
+    meta: { purchase_id: purchase.id, refunded_cents: refunded },
+  });
+}
+
+// ------- Pledge event forwarding (unchanged) -------
+
+async function handlePledgeEvent(event: { type: string; data: { object: any } }, env: StripeEnv) {
   const obj = event.data.object;
   const admin = await getAdmin();
-
   const pledgeId =
     obj?.metadata?.pledge_id ??
-    obj?.payment_intent?.metadata?.pledge_id ??
     (obj?.payment_intent && typeof obj.payment_intent === "object"
       ? obj.payment_intent.metadata?.pledge_id
       : undefined);
+  if (!pledgeId) return;
 
   switch (event.type) {
-    case "checkout.session.completed": {
-      // For manual-capture sessions, this fires when auth succeeds.
-      const paymentIntentId =
-        typeof obj.payment_intent === "string" ? obj.payment_intent : obj.payment_intent?.id;
-      const pid = obj.metadata?.pledge_id;
-      if (pid) {
-        await admin
-          .from("pledges")
-          .update({
-            status: "authorized",
-            stripe_payment_intent_id: paymentIntentId ?? null,
-            environment: env,
-          })
-          .eq("id", pid);
-      }
+    case "payment_intent.amount_capturable_updated":
+      await admin
+        .from("pledges")
+        .update({ status: "authorized", stripe_payment_intent_id: obj.id, environment: env })
+        .eq("id", pledgeId);
       break;
-    }
-    case "payment_intent.amount_capturable_updated": {
-      const pid = obj.metadata?.pledge_id;
-      if (pid) {
-        await admin
-          .from("pledges")
-          .update({ status: "authorized", stripe_payment_intent_id: obj.id })
-          .eq("id", pid);
-      }
+    case "payment_intent.succeeded":
+      await admin
+        .from("pledges")
+        .update({ status: "captured", stripe_payment_intent_id: obj.id })
+        .eq("id", pledgeId);
       break;
-    }
-    case "payment_intent.succeeded": {
-      if (pledgeId) {
-        await admin
-          .from("pledges")
-          .update({ status: "captured", stripe_payment_intent_id: obj.id })
-          .eq("id", pledgeId);
-      }
-      break;
-    }
     case "payment_intent.canceled":
-    case "payment_intent.payment_failed": {
-      if (pledgeId) {
-        await admin
-          .from("pledges")
-          .update({
-            status: event.type === "payment_intent.canceled" ? "cancelled" : "failed",
-          })
-          .eq("id", pledgeId);
-      }
+    case "payment_intent.payment_failed":
+      await admin
+        .from("pledges")
+        .update({ status: event.type === "payment_intent.canceled" ? "cancelled" : "failed" })
+        .eq("id", pledgeId);
       break;
-    }
+  }
+}
+
+// ------- Dispatcher -------
+
+async function handleEvent(event: { type: string; data: { object: any } }, env: StripeEnv) {
+  switch (event.type) {
+    case "checkout.session.completed":
+      await handleCheckoutSessionCompleted(event.data.object, env, env);
+      break;
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+      await upsertSubscription(event.data.object, env);
+      break;
+    case "customer.subscription.deleted":
+      await handleSubscriptionDeleted(event.data.object, env);
+      break;
+    case "charge.refunded":
+      await handleChargeRefunded(event.data.object, env);
+      break;
+    case "payment_intent.amount_capturable_updated":
+    case "payment_intent.succeeded":
+    case "payment_intent.canceled":
+    case "payment_intent.payment_failed":
+      await handlePledgeEvent(event, env);
+      break;
     default:
       console.log("Unhandled event", event.type);
   }
