@@ -2,12 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { SiteHeader } from "@/components/SiteHeader";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { createSupportCheckout, createPortalSession } from "@/lib/payments.functions";
 import { useSubscription } from "@/hooks/useSubscription";
 
 export const Route = createFileRoute("/support")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    checkout: typeof s.checkout === "string" ? s.checkout : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Support · Peptide Cooperative" },
@@ -69,10 +73,12 @@ const OPTIONS: Array<{
 
 function SupportPage() {
   const navigate = useNavigate();
+  const { checkout } = Route.useSearch();
   const [userId, setUserId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [selecting, setSelecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justPurchased, setJustPurchased] = useState(checkout === "success");
   const { sub, isActive, isPastDue } = useSubscription(userId);
 
   useEffect(() => {
@@ -82,6 +88,18 @@ function SupportPage() {
     });
     return () => s.subscription.unsubscribe();
   }, []);
+
+  // On return from Stripe, clear the checkout iframe and celebrate briefly.
+  useEffect(() => {
+    if (checkout === "success") {
+      setClientSecret(null);
+      setSelecting(null);
+      setJustPurchased(true);
+      // Strip the query param so a refresh doesn't re-trigger the banner.
+      navigate({ to: "/support", replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkout]);
 
   const openCheckout = async (priceId: string) => {
     setError(null);
@@ -116,6 +134,7 @@ function SupportPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaymentTestModeBanner />
       <SiteHeader />
       <main className="mx-auto max-w-[1000px] px-6 py-16 md:px-10">
         <h1 className="font-serif text-5xl tracking-tight md:text-6xl">Support the cooperative.</h1>
@@ -123,6 +142,20 @@ function SupportPage() {
           The cooperative funds independent testing of peptide products. Every contribution goes to
           the community testing fund, minus payment-processor fees.
         </p>
+
+        {justPurchased && (
+          <div className="mt-8 rounded-md border border-dashed border-emerald-600/40 bg-emerald-50/40 p-4 text-sm text-emerald-900">
+            Thank you — your payment went through. Access and receipts will appear here in a moment
+            (they arrive from Stripe via webhook).
+            <button
+              className="ml-3 underline"
+              onClick={() => setJustPurchased(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
 
         {isPastDue && (
           <div className="mt-8 rounded-md border border-dashed border-yellow-600/40 bg-yellow-50/40 p-4 text-sm">
