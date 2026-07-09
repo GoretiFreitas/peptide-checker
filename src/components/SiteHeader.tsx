@@ -28,7 +28,7 @@ export function SiteHeader() {
           <Link to="/board" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Board
           </Link>
-          <Link to="/support" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+          <Link to="/support" search={{}} className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Support
           </Link>
           {email ? (
@@ -39,7 +39,7 @@ export function SiteHeader() {
               Sign out
             </button>
           ) : (
-            <Link to="/auth" className="text-muted-foreground hover:text-foreground">
+            <Link to="/auth" search={{}} className="text-muted-foreground hover:text-foreground">
               Sign in
             </Link>
           )}
