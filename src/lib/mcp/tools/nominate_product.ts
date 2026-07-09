@@ -28,7 +28,8 @@ export default defineTool({
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async ({ product_name, seller, source_url, description }, ctx) => {
-    if (!ctx.isAuthenticated()) {
+    const userId = ctx.getUserId();
+    if (!ctx.isAuthenticated() || !userId) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const { data, error } = await supabaseForUser(ctx)
@@ -39,7 +40,7 @@ export default defineTool({
         source_url: source_url || null,
         description: description || null,
         state: "nominated",
-        nominated_by: ctx.getUserId(),
+        nominated_by: userId,
       })
       .select()
       .single();
