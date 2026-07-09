@@ -44,10 +44,12 @@ function AuthPage() {
     setError(null);
     try {
       if (mode === "signup") {
+        const returnTo =
+          window.location.origin + "/auth" + (next ? `?next=${encodeURIComponent(next)}` : "");
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: returnTo },
         });
         if (error) throw error;
       } else {
