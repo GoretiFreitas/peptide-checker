@@ -4,16 +4,55 @@ import { getItem } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 
 export const Route = createFileRoute("/registry/$itemId")({
-  head: () => ({
-    meta: [
-      { title: "Registry — Cooperative" },
-      {
-        name: "description",
-        content: "Published independent test report.",
-      },
-    ],
-  }),
+  loader: async ({ params }) => {
+    try {
+      const res = await getItem({ data: { id: params.itemId } });
+      return {
+        productName: (res.item as { product_name?: string } | null)?.product_name ?? null,
+        hasResult: !!res.result,
+      };
+    } catch {
+      return { productName: null, hasResult: false };
+    }
+  },
+  head: ({ params, loaderData }) => {
+    const name = loaderData?.productName;
+    const title = name
+      ? `${name} — Independent Test Report`
+      : "Test Report — Certificate Checker";
+    const desc = name
+      ? `Published independent test report for ${name}.`
+      : "Published independent test report.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: desc },
+        { property: "og:title", content: title },
+        { property: "og:description", content: desc },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: `/registry/${params.itemId}` },
+      ],
+      links: [{ rel: "canonical", href: `/registry/${params.itemId}` }],
+      scripts: name
+        ? [
+            {
+              type: "application/ld+json",
+              children: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Report",
+                headline: `${name} — Independent Test Report`,
+                about: name,
+              }),
+            },
+          ]
+        : undefined,
+    };
+  },
   component: RegistryPage,
+  errorComponent: ({ error }) => (
+    <div className="p-10 font-serif">Something went wrong: {error.message}</div>
+  ),
+  notFoundComponent: () => <div className="p-10">Report not found.</div>,
 });
 
 const verdictStyle: Record<string, string> = {
