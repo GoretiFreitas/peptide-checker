@@ -22,13 +22,14 @@ export default defineTool({
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_input, ctx) => {
-    if (!ctx.isAuthenticated()) {
+    const userId = ctx.getUserId();
+    if (!ctx.isAuthenticated() || !userId) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const { data, error } = await supabaseForUser(ctx)
       .from("pledges")
       .select("*, board_items(product_name, state)")
-      .eq("user_id", ctx.getUserId())
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
