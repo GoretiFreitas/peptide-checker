@@ -162,7 +162,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
             user_id: context.userId,
           },
         },
-        automatic_tax: { enabled: true },
+        
         metadata: {
           pledge_id: pledge.id,
           item_id: item.id,
