@@ -12,13 +12,13 @@ import type { AnalysisResult } from "@/lib/certificate-types";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Certificate Checker — Peptide CoA Analysis" },
+      { title: "Peptide Certificate Checker — Peptide CoA Analysis" },
       {
         name: "description",
         content:
           "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports — and what it does not.",
       },
-      { property: "og:title", content: "Certificate Checker — Peptide CoA Analysis" },
+      { property: "og:title", content: "Peptide Certificate Checker — Peptide CoA Analysis" },
       {
         property: "og:description",
         content:
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
-          name: "Certificate Checker",
+          name: "Peptide Certificate Checker",
           applicationCategory: "HealthApplication",
           operatingSystem: "Web",
           description:
