@@ -104,7 +104,7 @@ function SupportPage() {
       setSelecting(null);
       setJustPurchased(true);
       // Strip the query param so a refresh doesn't re-trigger the banner.
-      navigate({ to: "/support", replace: true });
+      navigate({ to: "/support", search: {}, replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkout]);
