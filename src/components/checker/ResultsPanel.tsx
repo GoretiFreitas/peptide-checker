@@ -72,9 +72,9 @@ function Results({ result }: { result: AnalysisResult }) {
     <div className="space-y-8 rounded-md border border-border bg-card p-6 md:p-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+          <h2 className="text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
             Overall outcome
-          </div>
+          </h2>
           <div className="mt-2">
             <VerdictBadge verdict={verdict} />
           </div>
