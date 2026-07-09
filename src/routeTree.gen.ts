@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +19,11 @@ import { Route as BoardNominateRouteImport } from './routes/board.nominate'
 import { Route as BoardItemIdRouteImport } from './routes/board.$itemId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/support': typeof SupportRoute
   '/board/$itemId': typeof BoardItemIdRoute
   '/board/nominate': typeof BoardNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/support': typeof SupportRoute
   '/board/$itemId': typeof BoardItemIdRoute
   '/board/nominate': typeof BoardNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/support': typeof SupportRoute
   '/board/$itemId': typeof BoardItemIdRoute
   '/board/nominate': typeof BoardNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/support'
     | '/board/$itemId'
     | '/board/nominate'
     | '/registry/$itemId'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/support'
     | '/board/$itemId'
     | '/board/nominate'
     | '/registry/$itemId'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/support'
     | '/board/$itemId'
     | '/board/nominate'
     | '/registry/$itemId'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  SupportRoute: typeof SupportRoute
   BoardItemIdRoute: typeof BoardItemIdRoute
   BoardNominateRoute: typeof BoardNominateRoute
   RegistryItemIdRoute: typeof RegistryItemIdRoute
@@ -137,6 +150,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  SupportRoute: SupportRoute,
   BoardItemIdRoute: BoardItemIdRoute,
   BoardNominateRoute: BoardNominateRoute,
   RegistryItemIdRoute: RegistryItemIdRoute,
@@ -209,3 +230,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
