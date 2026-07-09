@@ -70,11 +70,11 @@ const OPTIONS: Array<{
   { id: "donate_25", priceId: "donate_25", title: "Donate $25", price: "$25", blurb: "One-time contribution to the testing fund.", kind: "one" },
   { id: "donate_100", priceId: "donate_100", title: "Donate $100", price: "$100", blurb: "One-time contribution to the testing fund.", kind: "one" },
   {
-    id: "registry_lifetime",
-    priceId: "registry_lifetime",
+    id: "registry_full_500",
+    priceId: "registry_full_500",
     title: "Registry Full Access",
-    price: "$20 lifetime",
-    blurb: "Unlocks full published test reports and archive downloads.",
+    price: "$500",
+    blurb: "Unlocks every published independent test report and archive download in the registry.",
     kind: "one",
   },
 ];
@@ -87,7 +87,16 @@ function SupportPage() {
   const [selecting, setSelecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justPurchased, setJustPurchased] = useState(checkout === "success");
+  const [publishedCount, setPublishedCount] = useState<number | null>(null);
   const { sub, isActive, isPastDue } = useSubscription(userId);
+
+  useEffect(() => {
+    supabase
+      .from("results")
+      .select("id", { count: "exact", head: true })
+      .not("published_at", "is", null)
+      .then(({ count }) => setPublishedCount(count ?? 0));
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -211,6 +220,13 @@ function SupportPage() {
                   <span className="text-sm text-muted-foreground">{o.price}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{o.blurb}</p>
+                {o.id === "registry_full_500" && (
+                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    {publishedCount === null
+                      ? "Loading report count…"
+                      : `${publishedCount} published test report${publishedCount === 1 ? "" : "s"} in the registry today`}
+                  </p>
+                )}
                 <button
                   disabled={selecting === o.priceId}
                   onClick={() => openCheckout(o.priceId)}
