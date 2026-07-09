@@ -78,15 +78,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Certificate Checker — Peptide CoA Analysis" },
+      { title: "Peptide Certificate Checker | Peptide CoA Analysis" },
       {
         name: "description",
         content:
-          "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports.",
+          "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not.",
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Certificate Checker" },
       { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "Peptide Certificate Checker | Peptide CoA Analysis" },
+      { name: "twitter:title", content: "Peptide Certificate Checker | Peptide CoA Analysis" },
+      { property: "og:description", content: "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not." },
+      { name: "twitter:description", content: "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8b58fd27-a06c-41f9-aae1-d09059ba3044" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8b58fd27-a06c-41f9-aae1-d09059ba3044" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
