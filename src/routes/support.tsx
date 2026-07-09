@@ -134,6 +134,7 @@ function SupportPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaymentTestModeBanner />
       <SiteHeader />
       <main className="mx-auto max-w-[1000px] px-6 py-16 md:px-10">
         <h1 className="font-serif text-5xl tracking-tight md:text-6xl">Support the cooperative.</h1>
@@ -141,6 +142,20 @@ function SupportPage() {
           The cooperative funds independent testing of peptide products. Every contribution goes to
           the community testing fund, minus payment-processor fees.
         </p>
+
+        {justPurchased && (
+          <div className="mt-8 rounded-md border border-dashed border-emerald-600/40 bg-emerald-50/40 p-4 text-sm text-emerald-900">
+            Thank you — your payment went through. Access and receipts will appear here in a moment
+            (they arrive from Stripe via webhook).
+            <button
+              className="ml-3 underline"
+              onClick={() => setJustPurchased(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
 
         {isPastDue && (
           <div className="mt-8 rounded-md border border-dashed border-yellow-600/40 bg-yellow-50/40 p-4 text-sm">
