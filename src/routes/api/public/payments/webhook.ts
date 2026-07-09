@@ -155,7 +155,7 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
   const amount = Number(full.amount_total ?? 0);
   let kind: "donation" | "registry" | "other" = "other";
   if (productId === "community_donation" || String(priceLookupKey).startsWith("donate_")) kind = "donation";
-  else if (productId === "registry_access" || priceLookupKey === "registry_lifetime") kind = "registry";
+  else if (productId === "registry_access" || priceLookupKey === "registry_full_500" || priceLookupKey === "registry_lifetime") kind = "registry";
 
   await admin.from("purchases").upsert(
     {
