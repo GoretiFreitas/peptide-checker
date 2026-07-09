@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { FileText, AlertCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import type { AnalysisResult, ExtractedCertificate, FieldResults, Flag } from "@/lib/certificate-types";
 import { StatusBadge, VerdictBadge } from "./StatusBadge";
-import { NominateBlock } from "./NominateBlock";
+
 
 interface Props {
   state:
@@ -271,24 +271,24 @@ function DisclaimerBox() {
 }
 
 function HonestFraming({ productName }: { productName: string }) {
-  const [nominating, setNominating] = useState(false);
+  const q = productName && productName !== "not reported" ? `?product=${encodeURIComponent(productName)}` : "";
   return (
     <div className="space-y-3">
       <p className="text-xs leading-relaxed text-muted-foreground">
         A document check is weaker than an independent test. A certificate can be fabricated, or
         produced from a different batch than the one that actually shipped. The strongest check is
-        an independent test of a product bought anonymously.
+        an independent test of a product bought anonymously — which is what the cooperative's
+        community testing board funds.
       </p>
-      {!nominating ? (
-        <button
-          onClick={() => setNominating(true)}
-          className="inline-flex items-center rounded-sm border border-border bg-background px-3 py-2 text-xs font-medium tracking-wide text-foreground hover:border-foreground/30"
-        >
-          Nominate this for independent testing
-        </button>
-      ) : (
-        <NominateBlock defaultName={productName === "not reported" ? "" : productName} />
-      )}
+      <Link
+        to="/board/nominate"
+        search={{ product: productName && productName !== "not reported" ? productName : undefined }}
+        className="inline-flex items-center rounded-sm bg-foreground px-4 py-2 text-[11px] font-medium tracking-[0.22em] uppercase text-background hover:bg-foreground/90"
+      >
+        Nominate for independent testing
+      </Link>
+      <span aria-hidden className="hidden">{q}</span>
     </div>
   );
 }
+
