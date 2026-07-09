@@ -6,6 +6,7 @@ import { analyze } from "@/lib/scoring";
 import { FileDropzone } from "@/components/checker/FileDropzone";
 import { RawTextInput } from "@/components/checker/RawTextInput";
 import { ResultsPanel } from "@/components/checker/ResultsPanel";
+import { SiteHeader } from "@/components/SiteHeader";
 import type { AnalysisResult } from "@/lib/certificate-types";
 
 export const Route = createFileRoute("/")({
@@ -81,6 +82,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SiteHeader />
       <div className="mx-auto grid max-w-[1400px] gap-8 px-6 py-10 md:grid-cols-[320px_1fr] md:gap-12 md:px-10 md:py-14">
         <aside className="flex flex-col justify-between md:sticky md:top-10 md:h-[calc(100vh-5rem)]">
           <div>

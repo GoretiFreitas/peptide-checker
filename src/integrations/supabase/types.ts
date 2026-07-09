@@ -14,16 +14,306 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      board_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          funding_deadline: string | null
+          goal_cents: number | null
+          id: string
+          nominated_by: string | null
+          operations_margin_cents: number
+          product_name: string
+          sample_cost_cents: number
+          seller: string
+          sequence: string | null
+          source_url: string | null
+          state: Database["public"]["Enums"]["board_state"]
+          test_battery: Json
+          test_cost_cents: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          funding_deadline?: string | null
+          goal_cents?: number | null
+          id?: string
+          nominated_by?: string | null
+          operations_margin_cents?: number
+          product_name: string
+          sample_cost_cents?: number
+          seller?: string
+          sequence?: string | null
+          source_url?: string | null
+          state?: Database["public"]["Enums"]["board_state"]
+          test_battery?: Json
+          test_cost_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          funding_deadline?: string | null
+          goal_cents?: number | null
+          id?: string
+          nominated_by?: string | null
+          operations_margin_cents?: number
+          product_name?: string
+          sample_cost_cents?: number
+          seller?: string
+          sequence?: string | null
+          source_url?: string | null
+          state?: Database["public"]["Enums"]["board_state"]
+          test_battery?: Json
+          test_cost_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      board_stretch_goals: {
+        Row: {
+          add_cost_cents: number
+          created_at: string
+          id: string
+          item_id: string
+          label: string
+          unlocked: boolean
+        }
+        Insert: {
+          add_cost_cents: number
+          created_at?: string
+          id?: string
+          item_id: string
+          label: string
+          unlocked?: boolean
+        }
+        Update: {
+          add_cost_cents?: number
+          created_at?: string
+          id?: string
+          item_id?: string
+          label?: string
+          unlocked?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_stretch_goals_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "board_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_fund: {
+        Row: {
+          id: boolean
+          total_cents: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          total_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          total_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pledges: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          environment: string
+          id: string
+          item_id: string
+          status: Database["public"]["Enums"]["pledge_status"]
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          environment?: string
+          id?: string
+          item_id: string
+          status?: Database["public"]["Enums"]["pledge_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          environment?: string
+          id?: string
+          item_id?: string
+          status?: Database["public"]["Enums"]["pledge_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pledges_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "board_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          handle: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          handle?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          handle?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      results: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          id: string
+          item_id: string
+          lab_name: string | null
+          published_at: string | null
+          raw_findings: Json
+          sampled_at: string | null
+          signed_off_at: string | null
+          signed_off_by: string | null
+          summary: string | null
+          tested_at: string | null
+          updated_at: string
+          verdict: Database["public"]["Enums"]["result_verdict"]
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          lab_name?: string | null
+          published_at?: string | null
+          raw_findings?: Json
+          sampled_at?: string | null
+          signed_off_at?: string | null
+          signed_off_by?: string | null
+          summary?: string | null
+          tested_at?: string | null
+          updated_at?: string
+          verdict?: Database["public"]["Enums"]["result_verdict"]
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          lab_name?: string | null
+          published_at?: string | null
+          raw_findings?: Json
+          sampled_at?: string | null
+          signed_off_at?: string | null
+          signed_off_by?: string | null
+          summary?: string | null
+          tested_at?: string | null
+          updated_at?: string
+          verdict?: Database["public"]["Enums"]["result_verdict"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "results_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "board_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      item_funding_totals: {
+        Row: {
+          backer_count: number | null
+          item_id: string | null
+          pledged_cents: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pledges_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "board_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin"
+      board_state:
+        | "nominated"
+        | "funding"
+        | "funded"
+        | "procuring"
+        | "testing"
+        | "published"
+        | "expired"
+      pledge_status:
+        | "authorized"
+        | "captured"
+        | "cancelled"
+        | "failed"
+        | "pending"
+      result_verdict: "consistent" | "concerns" | "failed" | "insufficient"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +440,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin"],
+      board_state: [
+        "nominated",
+        "funding",
+        "funded",
+        "procuring",
+        "testing",
+        "published",
+        "expired",
+      ],
+      pledge_status: [
+        "authorized",
+        "captured",
+        "cancelled",
+        "failed",
+        "pending",
+      ],
+      result_verdict: ["consistent", "concerns", "failed", "insufficient"],
+    },
   },
 } as const
