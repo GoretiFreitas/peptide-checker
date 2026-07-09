@@ -383,6 +383,13 @@ async function handleEvent(event: { type: string; data: { object: any } }, env: 
     case "charge.refunded":
       await handleChargeRefunded(event.data.object, env);
       break;
+    case "invoice.payment_succeeded":
+    case "invoice.paid":
+      await handleInvoicePaid(event.data.object, env, env);
+      break;
+    case "checkout.session.expired":
+      await handleCheckoutSessionExpired(event.data.object, env);
+      break;
     case "payment_intent.amount_capturable_updated":
     case "payment_intent.succeeded":
     case "payment_intent.canceled":
