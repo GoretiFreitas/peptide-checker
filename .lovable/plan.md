@@ -1,112 +1,104 @@
-# Certificate Checker
 
-A single-page tool that reads a peptide certificate of analysis (image, PDF, or pasted text), transcribes the reported fields with Gemini, then applies **deterministic code** to score fields, raise flags, and produce one of four fixed verdicts — with a permanent disclaimer. No accounts, no personal data.
+# "Test This Next" — Community Testing Board
+
+Adds a public crowdfunded testing board to the existing Certificate Checker. Anyone can browse product nominations, pledge money toward independent testing, and read published results. Pledges are held on Stripe with all-or-nothing capture. Certificate-checker nominations flow into the board.
+
+## What gets built
+
+### New pages (public, shareable, own OG tags)
+- `/board` — the board. Filter chips: Nominated · Funding · Funded · Procuring · Testing · Published · Expired. Item cards show product name, seller, state, funding bar, goal breakdown line, pledger count.
+- `/board/$itemId` — item detail. State timeline, full goal breakdown (sample + test + operations margin), stretch tiers, pledger list (handles only), pledge form, discussion-free (comments out of scope).
+- `/board/nominate` — nominate a product (name, seller, source URL, notes).
+- `/registry/$itemId` — the published result page (permanent, shareable, plain-language report + fixed disclaimer). Appears only once state = Published.
+- `/board/backer` — signed-in backers see their own pledges and status.
+- Existing `/` (Certificate Checker) — unchanged, except its "Nominate for independent testing" button now creates a real board nomination (requires sign-in; unauthenticated users get a "Sign in to nominate" CTA).
+
+Global nav gains three links: Checker · Board · Registry.
+
+### Roles
+- **Anyone (signed out):** browse board, browse registry, read published reports.
+- **Backer (email + Google sign-in):** nominate, pledge, view own pledges.
+- **Admin (manual role grant via `user_roles`):** move items between states, set goals & test batteries, sign off adverse results, mark procured / tested / published, upload the final report.
+
+### Item states (fixed, exactly as spec)
+Nominated → Funding → Funded → Procuring → Testing → Published, plus Expired / Refunded terminal state. Only admins transition; the app enforces legal transitions.
+
+### Funding & payments
+- Stripe (Lovable-managed seamless integration) — real payments. Full compliance handling not applicable to this offering (it's commissioning a service), so tax setup will be **tax calculation and collection only**.
+- Pledges use Stripe **PaymentIntents with `capture_method: manual`** — authorization only, no charge. When the item reaches its goal, admin action captures all successful auths; when it expires or fails procurement, all auths are cancelled → automatic release. This is the correct primitive for all-or-nothing pledges on Stripe.
+- Card auths only hold ~7 days. So Funding items have a max **14-day funding window** with a rolling re-auth reminder to backers if not yet funded; expired auths are auto-cancelled and the pledger re-authorizes.
+- Backers see: "Your card is authorized, not charged. You are only charged if this test is fully funded."
+- Surplus above goal flows to a visible community fund (single row we track and display on the board footer).
+
+### Integrity rules (rendered in every item detail + registry page)
+Fixed text block, always present:
+1. The cooperative buys samples anonymously — pledgers and sellers never supply the vial.
+2. Every funded test is published, whatever the outcome.
+3. Results are tied to a specific batch and date.
+4. Adverse results are signed off by a named human reviewer before publishing.
+5. Funding a test never influences the result.
+
+### Reused disclaimer
+The existing checker disclaimer text appears on every registry page.
+
+## Data model (Lovable Cloud)
+
+```text
+profiles            id (=auth.users.id), handle, created_at
+user_roles          user_id, role ('admin')                              -- separate table, per rules
+board_items        id, product_name, seller, source_url, sequence?, state,
+                    goal_cents, sample_cost_cents, test_cost_cents,
+                    operations_margin_cents, test_battery (jsonb),
+                    funding_deadline, nominated_by, created_at, updated_at
+board_stretch_goals item_id, label, add_cost_cents, unlocked
+pledges             id, item_id, user_id, amount_cents,
+                    stripe_payment_intent_id, status
+                       ('authorized'|'captured'|'cancelled'|'failed'),
+                    created_at
+results             item_id, batch_id, sampled_at, tested_at, lab_name,
+                    report_url (Storage), summary, verdict, signed_off_by,
+                    published_at
+community_fund      single row: total_cents (updated on capture)
+```
+
+RLS: everything scoped. Anyone can SELECT `board_items` and `results` where state indicates public visibility. Backers see their own `pledges`. Admins do everything through `has_role(auth.uid(), 'admin')`.
+
+## Server surface
+
+- `nominateItem` — create Nominated row.
+- `createPledge` — create Stripe PaymentIntent (manual capture), return `client_secret`, store row as `authorized` on webhook confirmation.
+- `getBoard` / `getItem` / `getRegistry` — public reads via publishable client + `TO anon` policies.
+- `getMyPledges` — auth read.
+- Admin: `setGoal`, `transitionState`, `captureAllPledges`, `cancelAllPledges`, `publishResult`, `signOffAdverseResult`.
+- Webhook: `POST /api/public/webhooks/stripe` — verifies signature; updates pledge status on `payment_intent.amount_capturable_updated`, `.canceled`, `.succeeded`.
+
+## AI (per spec: "AI agent runs the board")
+
+Uses existing Lovable AI Gateway (Gemini). Server functions:
+- `draftItemDescription({ productName, seller, notes })` — plain description for admin review.
+- `suggestGoalBreakdown({ productName, testBattery })` — pulls from a small table of test costs seeded in migration.
+- `draftResultReport({ result })` — plain-language report from raw lab values, routed for human sign-off before publish.
+
+All AI outputs are drafts an admin approves; nothing publishes autonomously.
 
 ## Design
 
-Plain and trustworthy. Warm off-white background, near-black text, muted taupe borders, one soft neutral action button. Serif display heading, sans body, uppercase micro-labels with wide tracking. No gradients, no bright colors, no marketing language.
+Keep the existing warm-ivory + serif-display palette. Board is a restrained card list, not a Kickstarter grid. Funding bars are thin taupe with a teal fill (`#0F7B6C`), never over-saturated. State badges use the existing pale-fill / dark-same-family-text badge system. Registry pages read like a published lab report.
 
-Layout (desktop): left rail with heading + short blurb + submit button pinned at the bottom; right side has two dashed-border cards side-by-side (file upload / raw text) and a tall dashed results card underneath. Mobile stacks vertically.
+Dark mode: the existing tokens carry through.
 
-## Build steps
+## Build order
 
-### Step 1 — Static shell
+1. Enable Lovable Cloud, add profiles + auth (email + Google), `user_roles`, `has_role`.
+2. Run `recommend_payment_provider`, then enable seamless Stripe with tax calculation and collection only.
+3. Migrations: all tables above + RLS + grants + seed 3 demo items (one Funding, one Funded, one Published with a signed-off result) so the board is never empty.
+4. Board list + item detail (read-only public reads).
+5. Nominate flow (signed-in). Wire the checker's nominate button to it.
+6. Pledge flow with Stripe manual-capture PaymentIntents + webhook.
+7. Admin console (single `/admin` route under `_authenticated`, gated by `has_role`) for state transitions, goal editing, capture/cancel, publish.
+8. Registry page + AI report drafting.
+9. Community fund totals + honest framing block sitewide.
 
-- Replace `src/routes/index.tsx` placeholder with the checker page.
-- Components in `src/components/checker/`: `Sidebar`, `FileDropzone` (accepts image/* and application/pdf, 12MB cap, drag+drop, filename chip), `RawTextInput` (textarea), `ResultsPanel`.
-- "Check certificate" button disabled until file or text is provided; on click, reveals an empty results area with "Analysis results pending".
-- Update `__root.tsx` head: title "Certificate Checker", matching description + OG/Twitter (no og:image).
+## Explicitly out of scope
 
-### Step 2 — Gemini extraction (transcription only)
-
-- Ensure `LOVABLE_API_KEY` exists (`ai_gateway--create`).
-- Server function `src/lib/extract-certificate.functions.ts` using `createServerFn` + `@ai-sdk/openai-compatible` provider (`https://ai.gateway.lovable.dev/v1`, header `Lovable-API-Key`), model `google/gemini-2.5-flash` (vision + PDF capable).
-- Input: `{ text?: string, fileBase64?: string, fileMime?: string, fileName?: string }`. Client reads file with FileReader → base64 before submit.
-- Multimodal message: `image_url` for images, `file` block with real MIME for PDFs, plain text otherwise.
-- Prompt instructs Gemini to **read and transcribe only** — no judgment, no scoring — and return strict JSON with these fields (use exact string `"not reported"` when absent):
-  - `productName`, `sequence`
-  - `identity`: `{ result, method }`
-  - `purity`: `{ percent (number|null), method, wavelength }`
-  - `netPeptideContent`
-  - `endotoxins`: `{ result, units }`
-  - `sterility`
-  - `elementalImpurities`
-  - `residualSolvents`
-  - `issuingLab`, `issueDate`, `batchId`
-  - `rawNotes` (short verbatim quotes supporting each field)
-- Structured output via `generateText` + `Output.object(zodSchema)`; wrap in `NoObjectGeneratedError` guard with graceful fallback.
-- Handle 429 (rate limit) and 402 (credits) with user-facing messages.
-- Render extracted fields in the results panel as a labelled list, with the verbatim `rawNotes` shown small under each field so the user can verify accuracy.
-
-### Step 3 — Deterministic scoring (pure client code, not Gemini)
-
-- New file `src/lib/scoring.ts` — pure functions, unit-testable, no AI.
-- `scoreFields(extracted)` returns per-field results:
-  - **Identity**: `pass` if method + result present and result mentions/matches `productName` or `sequence`; `fail` if result explicitly names a different peptide; `unknown` if `"not reported"`.
-  - **Purity**: parse percent → `≥98` "pass (premium)", `95–<98` "pass (research grade)", `<95` "fail", null "unknown".
-  - **Net peptide content, endotoxins, sterility, elemental impurities, residual solvents**: `"reported (value shown)"` if not `"not reported"`, else `"not tested"`.
-  - Invariant: a `"not reported"` field NEVER becomes `pass`.
-- `computeFlags(extracted, fieldResults)` returns `{ level: 'high'|'medium'|'low', message: string }[]`:
-  - **Scope-overreach (high)**: purity percent present AND endotoxins, sterility, elementalImpurities, residualSolvents all `"not tested"` → message that the purity figure covers peptide-related impurities only and says nothing about contaminants relevant to injection.
-  - **Missing-test (high each)**: identity / endotoxins / sterility each `"not tested"` → flag naming the level of verification that omission blocks (identity → "confirms the vial actually contains the named peptide"; endotoxins → "rules out pyrogenic contamination for injectable use"; sterility → "rules out microbial contamination").
-  - **Provenance (medium)**: `issuingLab === "not reported"`.
-  - **Consistency (high)**: identity result names a different peptide than `productName`/`sequence`.
-- Render each flag with a colored dot for level and plain-language text.
-
-### Step 4 — Verdict + mandatory disclaimer
-
-- `computeVerdict(fieldResults, flags)` returns exactly one of:
-  - `"Document review — consistent"` — identity `pass`, no high flags, all reported values meet thresholds. Rendered with subtitle "Based on the document only, not an independent test."
-  - `"Document review — concerns"` — one or more medium/high flags but not a fail.
-  - `"Failed"` — identity `fail`, or a reported contaminant exceeds its limit (endotoxin numeric > standard threshold — parsed from `endotoxins.result`).
-  - `"Insufficient evidence"` — too few fields readable (e.g. `productName` and identity both `"not reported"`, or extraction returned mostly nulls).
-- Results panel renders, in order: **verdict** (large), **per-field results** (labelled list with pass/fail/unknown badges), **flags** (grouped by importance), then a fixed bordered box with exactly:
-  > "This describes what the certificate reports about the contents of a product. It is not a statement that the product is safe to inject or consume, or that it is effective or approved."
-- No wording anywhere may imply the product is safe to use.
-
-### Step 5 — Honest framing + nomination
-
-- Short paragraph under the disclaimer: a document check is weaker than an independent test because a certificate can be faked or produced from a different batch than what shipped; the strongest check is independent testing of a product bought anonymously.
-- Button **"Nominate this for independent testing"** → opens a small inline form (product name pre-filled from extraction, editable) → on submit stores to `localStorage` array `certificate-checker.nominations` and shows an inline thank-you message. No backend, no personal info collected.
-
-## Technical
-
-- Stack: TanStack Start, TanStack Query, Tailwind v4, shadcn primitives already available.
-- New files:
-  - `src/routes/index.tsx` (replace placeholder)
-  - `src/components/checker/{Sidebar,FileDropzone,RawTextInput,ResultsPanel,VerdictBlock,FieldList,FlagsList,DisclaimerBox,NominateBlock}.tsx`
-  - `src/lib/extract-certificate.functions.ts` (server fn)
-  - `src/lib/ai-gateway.server.ts` (provider helper, per knowledge)
-  - `src/lib/scoring.ts` (pure deterministic rules)
-  - `src/lib/certificate-types.ts` (shared Zod schema + TS types)
-- `__root.tsx` head updated for title/description/OG.
-- Serif display font (Instrument Serif) + Inter loaded via `<link>` in root head.
-- Design tokens tweaked in `src/styles.css` for warm off-white background and taupe borders (light-only rendering).
-
-## Out of scope
-
-- Auth, user accounts, saved history, admin dashboard, real independent-testing backend (nominations stored locally for now), payments.
-  &nbsp;
-  Design and Palette
-  Update the visual design of the app to use this exact color system. Apply it consistently across every screen — do not introduce any other colors.
-  Backgrounds and surfaces:
-  - Page background: #FAF8F3 (a warm ivory, not white)
-  - Cards and panels: #FFFFFF
-  - Hairline borders and dividers: 0.5px solid #E7E3D8
-  Text:
-  - Primary text and headings: #1A1D23
-  - Secondary and supporting text: #5F636B
-  - Muted hints, timestamps, and batch identifiers: #8A8578
-  Brand and actions:
-  - Headers, the logo, and any strong emphasis: ink navy #1B2A4A
-  - One accent color only, used sparingly for links, primary buttons, and active states: signal teal #0F7B6C. Buttons in teal use white text. Links are teal with no underline until hover.
-  Verdict and status badges — use a pale fill with dark same-family text, never bright or saturated. Keep them calm and understated, like a measured finding rather than a marketing badge:
-  - Verified: background #E7F1EA, text #1E5637
-  - Concerns: background #FBF0DC, text #7A4E12
-  - Failed: background #F7E4E1, text #7C271E
-  - Funding or active: background #E4F1EE, text #0F5A4F
-  - In progress or testing: background #FBF0DC, text #7A4E12
-  - Nominated or neutral: background #EDEBE3, text #4A4842
-  Typography and feel: clean, restrained, and precise, like a scientific journal or a lab report. No bright colors, no gradients, no shadows beyond a subtle card border. Sentence case everywhere. The overall impression should be calm, independent, and trustworthy — deliberately the opposite of a flashy sales page.
-  Also add a dark mode using the same system: page background #14181F, cards #1C222C, hairlines #2C333F, primary text #ECEAE3, secondary text #A6ABB4, accent teal #3DA594. Keep the verdict badges legible by using darker fills with the same-family light text. Let the app follow the device's light or dark setting automatically.
-  Keep all existing functionality and layout unchanged — this update is only colors, typography, and styling.
+Comments/discussion, on-chain escrow (spec calls it optional, later), refunds outside auto-cancel, email notifications beyond Supabase auth mail, and mobile app.
