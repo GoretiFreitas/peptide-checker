@@ -133,6 +133,15 @@ function AuthPage() {
           >
             {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={sendReset}
+              className="w-full text-center text-[11px] tracking-[0.18em] uppercase text-muted-foreground underline"
+            >
+              Forgot password?
+            </button>
+          )}
         </form>
 
         <div className="my-6 flex items-center gap-3">
