@@ -6,18 +6,21 @@ import { SiteHeader } from "@/components/SiteHeader";
 export const Route = createFileRoute("/board/")({
   head: () => ({
     meta: [
-      { title: "Testing Board — Cooperative" },
+      { title: "Testing Board — Certificate Checker" },
       {
         name: "description",
         content:
           "Community-funded independent tests of peptide products. Pledge to back a test; you're only charged if the goal is met.",
       },
-      { property: "og:title", content: "Testing Board — Cooperative" },
+      { property: "og:title", content: "Testing Board — Certificate Checker" },
       {
         property: "og:description",
         content: "Community-funded independent tests of peptide products.",
       },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/board" },
     ],
+    links: [{ rel: "canonical", href: "/board" }],
   }),
   component: BoardIndex,
 });
