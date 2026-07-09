@@ -8,12 +8,20 @@ import { SiteHeader } from "@/components/SiteHeader";
 export const Route = createFileRoute("/board/nominate")({
   head: () => ({
     meta: [
-      { title: "Nominate a product — Cooperative" },
+      { title: "Nominate a product — Certificate Checker" },
       {
         name: "description",
         content: "Suggest a peptide product for an independent, community-funded test.",
       },
+      { property: "og:title", content: "Nominate a product — Certificate Checker" },
+      {
+        property: "og:description",
+        content: "Suggest a peptide product for an independent, community-funded test.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/board/nominate" },
     ],
+    links: [{ rel: "canonical", href: "/board/nominate" }],
   }),
   validateSearch: (s: Record<string, unknown>) => ({
     product: typeof s.product === "string" ? s.product : undefined,

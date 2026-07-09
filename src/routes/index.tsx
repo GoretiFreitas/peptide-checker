@@ -12,20 +12,37 @@ import type { AnalysisResult } from "@/lib/certificate-types";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Certificate Checker" },
+      { title: "Certificate Checker — Peptide CoA Analysis" },
       {
         name: "description",
         content:
           "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports — and what it does not.",
       },
-      { property: "og:title", content: "Certificate Checker" },
+      { property: "og:title", content: "Certificate Checker — Peptide CoA Analysis" },
       {
         property: "og:description",
         content:
           "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports — and what it does not.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "/" },
       { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "Certificate Checker",
+          applicationCategory: "HealthApplication",
+          operatingSystem: "Web",
+          description:
+            "Analyze peptide Certificates of Analysis field by field. Identity, purity, endotoxins, sterility, contaminants — with an honest verdict and clear disclaimers.",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        }),
+      },
     ],
   }),
   component: Index,

@@ -11,16 +11,39 @@ import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/board/$itemId")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Item — Cooperative` },
-      {
-        name: "description",
-        content: `Back the independent test of ${params.itemId}.`,
-      },
-    ],
-  }),
+  loader: async ({ params }) => {
+    try {
+      const res = await getItem({ data: { id: params.itemId } });
+      return { productName: (res.item as { product_name?: string } | null)?.product_name ?? null };
+    } catch {
+      return { productName: null };
+    }
+  },
+  head: ({ params, loaderData }) => {
+    const name = loaderData?.productName;
+    const title = name
+      ? `${name} — Peptide Testing Board`
+      : "Peptide Testing Board — Certificate Checker";
+    const desc = name
+      ? `Back the independent test of ${name}. Pledge to fund; only charged if the goal is met.`
+      : "Back an independent test of a peptide product on the community testing board.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: desc },
+        { property: "og:title", content: title },
+        { property: "og:description", content: desc },
+        { property: "og:type", content: "product" },
+        { property: "og:url", content: `/board/${params.itemId}` },
+      ],
+      links: [{ rel: "canonical", href: `/board/${params.itemId}` }],
+    };
+  },
   component: ItemDetail,
+  errorComponent: ({ error }) => (
+    <div className="p-10 font-serif">Something went wrong: {error.message}</div>
+  ),
+  notFoundComponent: () => <div className="p-10">Item not found.</div>,
 });
 
 function money(cents: number) {

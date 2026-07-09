@@ -14,13 +14,21 @@ export const Route = createFileRoute("/support")({
   }),
   head: () => ({
     meta: [
-      { title: "Support · Peptide Cooperative" },
+      { title: "Support — Certificate Checker" },
       {
         name: "description",
         content:
           "Support independent peptide testing through a monthly or yearly membership, a one-time donation, or by unlocking full registry access.",
       },
+      { property: "og:title", content: "Support — Certificate Checker" },
+      {
+        property: "og:description",
+        content: "Fund independent peptide testing. Membership, donations, and registry access.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/support" },
     ],
+    links: [{ rel: "canonical", href: "/support" }],
   }),
   component: SupportPage,
   errorComponent: ({ error, reset }) => (
@@ -199,7 +207,7 @@ function SupportPage() {
             {OPTIONS.map((o) => (
               <div key={o.id} className="rounded-md border border-dashed border-border p-6">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-serif text-2xl">{o.title}</h3>
+                  <h2 className="font-serif text-2xl">{o.title}</h2>
                   <span className="text-sm text-muted-foreground">{o.price}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{o.blurb}</p>

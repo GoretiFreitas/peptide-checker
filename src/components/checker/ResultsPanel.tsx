@@ -72,9 +72,9 @@ function Results({ result }: { result: AnalysisResult }) {
     <div className="space-y-8 rounded-md border border-border bg-card p-6 md:p-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+          <h2 className="text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
             Overall outcome
-          </div>
+          </h2>
           <div className="mt-2">
             <VerdictBadge verdict={verdict} />
           </div>
@@ -144,9 +144,9 @@ function FieldsList({
 
   return (
     <div>
-      <div className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+      <h2 className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
         Extracted fields
-      </div>
+      </h2>
       <div>
         <Row label="Product / peptide" value={extracted.productName} />
         <Row label="Sequence" value={extracted.sequence} />
@@ -220,9 +220,9 @@ function FlagsList({ flags }: { flags: Flag[] }) {
   if (flags.length === 0) {
     return (
       <div>
-        <div className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+        <h2 className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
           Flags
-        </div>
+        </h2>
         <div className="text-sm text-muted-foreground">No flags raised.</div>
       </div>
     );
@@ -231,9 +231,9 @@ function FlagsList({ flags }: { flags: Flag[] }) {
   const sorted = [...flags].sort((a, b) => order[a.level] - order[b.level]);
   return (
     <div>
-      <div className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+      <h2 className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
         Flags
-      </div>
+      </h2>
       <ul className="space-y-3">
         {sorted.map((f, i) => (
           <li key={i} className="flex gap-3 rounded-sm border border-border bg-background/40 p-3">
