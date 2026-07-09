@@ -7,9 +7,15 @@ import { SiteHeader } from "@/components/SiteHeader";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Cooperative" },
-      { name: "description", content: "Sign in to nominate products and back tests." },
+      { title: "Sign in — Certificate Checker" },
+      { name: "description", content: "Sign in to nominate products and back independent tests." },
+      { property: "og:title", content: "Sign in — Certificate Checker" },
+      { property: "og:description", content: "Sign in to nominate products and back independent tests." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "/auth" },
+      { name: "robots", content: "noindex" },
     ],
+    links: [{ rel: "canonical", href: "/auth" }],
   }),
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" ? s.next : undefined,
