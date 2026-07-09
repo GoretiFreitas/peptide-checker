@@ -1,0 +1,16 @@
+# Certificate Checker
+
+> Read a peptide Certificate of Analysis field by field, with an honest verdict and a community-funded independent testing board.
+
+Certificate Checker analyzes peptide Certificates of Analysis (CoAs). It extracts what the document reports — identity, purity, endotoxins, sterility, contaminants — and applies deterministic scoring rules. Missing tests are never turned into a pass. A separate community testing board crowdfunds independent laboratory tests of specific peptide products.
+
+## Pages
+
+- [Certificate Checker](/): Upload or paste a CoA and get a field-by-field analysis.
+- [Testing Board](/board): Community-funded independent tests of peptide products.
+- [Nominate a product](/board/nominate): Suggest a peptide product for independent testing.
+- [Support](/support): Fund the cooperative through membership, donations, or registry access.
+
+## Optional
+
+- [Sign in](/auth): Account access for nominating and pledging.
