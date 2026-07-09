@@ -231,9 +231,9 @@ function FlagsList({ flags }: { flags: Flag[] }) {
   const sorted = [...flags].sort((a, b) => order[a.level] - order[b.level]);
   return (
     <div>
-      <div className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+      <h2 className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
         Flags
-      </div>
+      </h2>
       <ul className="space-y-3">
         {sorted.map((f, i) => (
           <li key={i} className="flex gap-3 rounded-sm border border-border bg-background/40 p-3">
