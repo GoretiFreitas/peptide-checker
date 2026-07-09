@@ -59,9 +59,11 @@
               "enum": [
                 "nominated",
                 "funding",
+                "funded",
+                "procuring",
                 "testing",
                 "published",
-                "cancelled"
+                "expired"
               ],
               "description": "Optional filter for the item state."
             }

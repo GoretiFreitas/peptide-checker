@@ -10,7 +10,7 @@ export default defineTool({
     "List community testing board items — peptide products nominated for independent testing, with their state and current funding.",
   inputSchema: {
     state: z
-      .enum(["nominated", "funding", "testing", "published", "cancelled"])
+      .enum(["nominated", "funding", "funded", "procuring", "testing", "published", "expired"])
       .optional()
       .describe("Optional filter for the item state."),
   },
