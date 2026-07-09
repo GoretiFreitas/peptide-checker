@@ -220,6 +220,13 @@ function SupportPage() {
                   <span className="text-sm text-muted-foreground">{o.price}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{o.blurb}</p>
+                {o.id === "registry_full_500" && (
+                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    {publishedCount === null
+                      ? "Loading report count…"
+                      : `${publishedCount} published test report${publishedCount === 1 ? "" : "s"} in the registry today`}
+                  </p>
+                )}
                 <button
                   disabled={selecting === o.priceId}
                   onClick={() => openCheckout(o.priceId)}
