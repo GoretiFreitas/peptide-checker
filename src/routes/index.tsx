@@ -107,7 +107,7 @@ function Index() {
               Document review
             </div>
             <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground md:text-5xl">
-              Certificate Checker.
+              Peptide Certificate Checker.
             </h1>
             <p className="mt-6 max-w-[28ch] text-sm leading-relaxed text-muted-foreground">
               Read a peptide Certificate of Analysis and see, field by field, what the document
