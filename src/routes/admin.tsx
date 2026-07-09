@@ -13,7 +13,13 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { getStripeEnvironment } from "@/lib/stripe-client";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — Cooperative" }] }),
+  head: () => ({
+    meta: [
+      { title: "Admin — Certificate Checker" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+    links: [{ rel: "canonical", href: "/admin" }],
+  }),
   component: AdminPage,
 });
 
