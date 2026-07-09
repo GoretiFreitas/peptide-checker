@@ -218,21 +218,117 @@ async function handleChargeRefunded(charge: any, env: StripeEnv) {
     .update({ status, refunded_cents: refunded, updated_at: new Date().toISOString() })
     .eq("id", purchase.id);
 
-  // If fully refunded and registry, revoke access
-  if (status === "refunded" && purchase.kind === "registry" && purchase.user_id) {
-    await revokeRole(admin, purchase.user_id, "registry_member");
+  // Full-refund entitlement revocation
+  if (status === "refunded" && purchase.user_id) {
+    if (purchase.kind === "registry") {
+      await revokeRole(admin, purchase.user_id, "registry_member");
+    }
+    if (purchase.kind === "subscription_charge") {
+      // Supporter refund → revoke immediately per business rule
+      await revokeRole(admin, purchase.user_id, "supporter");
+    }
   }
-  // If fully refunded and donation, subtract from fund
+  // If fund was credited on this purchase, debit the fund by the same amount
   if (status === "refunded" && purchase.credited_to_fund && purchase.fund_credit_cents) {
-    await creditFund(admin, -Number(purchase.fund_credit_cents), "donation refund", {
+    await creditFund(admin, -Number(purchase.fund_credit_cents), `${purchase.kind} refund`, {
       purchase_id: purchase.id,
     });
   }
   await admin.from("admin_activity").insert({
     kind: "refund",
     message: `Refund on ${pi} — ${status}`,
-    meta: { purchase_id: purchase.id, refunded_cents: refunded },
+    meta: { purchase_id: purchase.id, kind: purchase.kind, refunded_cents: refunded },
   });
+}
+
+// Membership renewals & initial subscription invoices: record as a purchase
+// (kind='subscription_charge') and credit 60% of net revenue to the fund.
+const MEMBERSHIP_FUND_SHARE = 0.6;
+
+async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: StripeEnv) {
+  // Only paid subscription invoices with a real charge
+  if (!invoice || invoice.status !== "paid") return;
+  const subscriptionId =
+    typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+  if (!subscriptionId) return; // one-off invoices handled via checkout.session.completed
+  const paymentIntentId =
+    typeof invoice.payment_intent === "string" ? invoice.payment_intent : invoice.payment_intent?.id;
+  if (!paymentIntentId) return;
+
+  const admin = await getAdmin();
+  const stripe = createStripeClient(stripeEnvKey);
+
+  // Pull userId from the subscription (most reliable place we set it)
+  const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
+  const userId = sub.metadata?.userId ?? null;
+
+  // Retrieve the charge for net (after Stripe fees) via balance transaction
+  const pi: any = await stripe.paymentIntents.retrieve(paymentIntentId, {
+    expand: ["latest_charge.balance_transaction"],
+  });
+  const charge: any = pi?.latest_charge;
+  const bt: any = charge?.balance_transaction;
+  const netCents = typeof bt === "object" && bt ? Number(bt.net ?? 0) : null;
+  const amount = Number(invoice.amount_paid ?? invoice.total ?? 0);
+
+  const item = sub.items?.data?.[0];
+  const priceLookup =
+    item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
+  const productId =
+    typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id;
+
+  // Compute fund credit: 60% of net (Stripe fee-adjusted) revenue
+  const baseForFund = netCents ?? amount;
+  const fundCredit = Math.floor(baseForFund * MEMBERSHIP_FUND_SHARE);
+
+  const { error: upsertErr } = await admin.from("purchases").upsert(
+    {
+      user_id: userId,
+      stripe_payment_intent_id: paymentIntentId,
+      stripe_checkout_session_id: null,
+      stripe_customer_id: typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id,
+      product_id: productId ?? "supporter_membership",
+      price_id: priceLookup,
+      kind: "subscription_charge",
+      amount_cents: amount,
+      net_cents: netCents,
+      currency: invoice.currency ?? "usd",
+      status: "succeeded",
+      environment: env,
+      credited_to_fund: fundCredit > 0,
+      fund_credit_cents: fundCredit > 0 ? fundCredit : null,
+      metadata: {
+        subscription_id: subscriptionId,
+        invoice_id: invoice.id,
+        billing_reason: invoice.billing_reason,
+      },
+    },
+    { onConflict: "stripe_payment_intent_id", ignoreDuplicates: false },
+  );
+  if (upsertErr) {
+    console.error("invoice.paid upsert error", upsertErr);
+    return;
+  }
+
+  if (fundCredit > 0) {
+    await creditFund(admin, fundCredit, "supporter membership (60% share)", {
+      invoice_id: invoice.id,
+      subscription_id: subscriptionId,
+      userId,
+    });
+  }
+}
+
+async function handleCheckoutSessionExpired(session: any, env: StripeEnv) {
+  const pledgeId = session.metadata?.pledge_id;
+  if (!pledgeId) return;
+  const admin = await getAdmin();
+  await admin
+    .from("pledges")
+    .update({ status: "cancelled" })
+    .eq("id", pledgeId)
+    .eq("environment", env)
+    .eq("status", "pending");
 }
 
 // ------- Pledge event forwarding (unchanged) -------
