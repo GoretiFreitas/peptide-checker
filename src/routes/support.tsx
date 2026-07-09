@@ -73,10 +73,12 @@ const OPTIONS: Array<{
 
 function SupportPage() {
   const navigate = useNavigate();
+  const { checkout } = Route.useSearch();
   const [userId, setUserId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [selecting, setSelecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justPurchased, setJustPurchased] = useState(checkout === "success");
   const { sub, isActive, isPastDue } = useSubscription(userId);
 
   useEffect(() => {
@@ -86,6 +88,18 @@ function SupportPage() {
     });
     return () => s.subscription.unsubscribe();
   }, []);
+
+  // On return from Stripe, clear the checkout iframe and celebrate briefly.
+  useEffect(() => {
+    if (checkout === "success") {
+      setClientSecret(null);
+      setSelecting(null);
+      setJustPurchased(true);
+      // Strip the query param so a refresh doesn't re-trigger the banner.
+      navigate({ to: "/support", replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkout]);
 
   const openCheckout = async (priceId: string) => {
     setError(null);
