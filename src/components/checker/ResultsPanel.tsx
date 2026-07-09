@@ -144,9 +144,9 @@ function FieldsList({
 
   return (
     <div>
-      <div className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+      <h2 className="mb-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
         Extracted fields
-      </div>
+      </h2>
       <div>
         <Row label="Product / peptide" value={extracted.productName} />
         <Row label="Sequence" value={extracted.sequence} />
