@@ -56,6 +56,27 @@ function AuthPage() {
     }
   };
 
+  const sendReset = async () => {
+    setError(null);
+    if (!email) {
+      setError("Enter your email above first, then click reset.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      setError("Password-reset email sent. Check your inbox.");
+    } catch (e: any) {
+      setError(e.message ?? "Reset failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   const google = async () => {
     setError(null);
     const result = await lovable.auth.signInWithOAuth("google", {
