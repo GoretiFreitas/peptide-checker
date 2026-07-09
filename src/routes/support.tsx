@@ -70,11 +70,11 @@ const OPTIONS: Array<{
   { id: "donate_25", priceId: "donate_25", title: "Donate $25", price: "$25", blurb: "One-time contribution to the testing fund.", kind: "one" },
   { id: "donate_100", priceId: "donate_100", title: "Donate $100", price: "$100", blurb: "One-time contribution to the testing fund.", kind: "one" },
   {
-    id: "registry_lifetime",
-    priceId: "registry_lifetime",
+    id: "registry_full_500",
+    priceId: "registry_full_500",
     title: "Registry Full Access",
-    price: "$20 lifetime",
-    blurb: "Unlocks full published test reports and archive downloads.",
+    price: "$500",
+    blurb: "Unlocks every published independent test report and archive download in the registry.",
     kind: "one",
   },
 ];
