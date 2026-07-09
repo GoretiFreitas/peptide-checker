@@ -87,7 +87,16 @@ function SupportPage() {
   const [selecting, setSelecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justPurchased, setJustPurchased] = useState(checkout === "success");
+  const [publishedCount, setPublishedCount] = useState<number | null>(null);
   const { sub, isActive, isPastDue } = useSubscription(userId);
+
+  useEffect(() => {
+    supabase
+      .from("results")
+      .select("id", { count: "exact", head: true })
+      .not("published_at", "is", null)
+      .then(({ count }) => setPublishedCount(count ?? 0));
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
