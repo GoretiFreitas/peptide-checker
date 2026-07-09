@@ -51,8 +51,7 @@ function AdminPage() {
   });
 
   const setItem = useMutation({
-    mutationFn: (d: Parameters<typeof adminSetItem>[0]["data"]) =>
-      adminSetItem({ data: d }),
+    mutationFn: (d: any) => adminSetItem({ data: d }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
   });
 
@@ -65,8 +64,7 @@ function AdminPage() {
   });
 
   const publish = useMutation({
-    mutationFn: (d: Parameters<typeof adminPublishResult>[0]["data"]) =>
-      adminPublishResult({ data: d }),
+    mutationFn: (d: any) => adminPublishResult({ data: d }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
   });
 
