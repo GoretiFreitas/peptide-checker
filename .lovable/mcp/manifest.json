@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://dagavnilqwvgvvlkzfyr.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "certificate-checker-mcp",
+      "version": "0.1.0",
+      "title": "Certificate Checker"
+    },
+    "tools": [
+      {
+        "name": "check_certificate",
+        "title": "Check peptide Certificate of Analysis",
+        "description": "Extract fields from a peptide Certificate of Analysis (identity, purity, endotoxins, sterility, contaminants) and return a deterministic verdict, per-field results, and flags. Accepts pasted certificate text.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 20,
+              "description": "Full text of the certificate as pasted or OCR-extracted."
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_board",
+        "title": "List testing board items",
+        "description": "List community testing board items — peptide products nominated for independent testing, with their state and current funding.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "nominated",
+                "funding",
+                "funded",
+                "procuring",
+                "testing",
+                "published",
+                "expired"
+              ],
+              "description": "Optional filter for the item state."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "nominate_product",
+        "title": "Nominate a product for independent testing",
+        "description": "Nominate a peptide product to be tested independently by the cooperative. Creates a new board item in the 'nominated' state, owned by the signed-in user.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "product_name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200,
+              "description": "Product / peptide name."
+            },
+            "seller": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "",
+              "description": "Seller or vendor name."
+            },
+            "source_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Optional product page URL."
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Optional context or reason."
+            }
+          },
+          "required": [
+            "product_name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "my_pledges",
+        "title": "List my pledges",
+        "description": "List the signed-in user's pledges toward independent tests on the community testing board.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
