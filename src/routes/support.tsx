@@ -207,7 +207,7 @@ function SupportPage() {
             {OPTIONS.map((o) => (
               <div key={o.id} className="rounded-md border border-dashed border-border p-6">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-serif text-2xl">{o.title}</h3>
+                  <h2 className="font-serif text-2xl">{o.title}</h2>
                   <span className="text-sm text-muted-foreground">{o.price}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{o.blurb}</p>
