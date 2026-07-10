@@ -97,6 +97,15 @@ function SupportPage() {
   const [justPurchased, setJustPurchased] = useState(checkout === "success");
   const [publishedCount, setPublishedCount] = useState<number | null>(null);
   const { sub, isActive, isPastDue } = useSubscription(userId);
+  const { isSupporter, isRegistryMember } = useUserRoles(userId);
+  const env = (() => {
+    try { return getStripeEnvironment(); } catch { return "sandbox" as const; }
+  })();
+  const purchasesQ = useQuery({
+    queryKey: ["my-purchases", userId, env],
+    queryFn: () => getMyPurchases({ data: { environment: env } }),
+    enabled: !!userId,
+  });
 
   useEffect(() => {
     supabase
