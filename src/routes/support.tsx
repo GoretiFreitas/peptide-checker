@@ -1,12 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
-import { createSupportCheckout, createPortalSession } from "@/lib/payments.functions";
+import {
+  createSupportCheckout,
+  createPortalSession,
+  getMyPurchases,
+  getReceiptUrl,
+} from "@/lib/payments.functions";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useUserRoles } from "@/hooks/useUserRoles";
+import { SupporterBadge } from "@/components/SupporterBadge";
 
 export const Route = createFileRoute("/support")({
   validateSearch: (s: Record<string, unknown>) => ({
