@@ -39,6 +39,13 @@ export function SiteHeader() {
           <Link to="/" className={linkClass} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
           <Link to="/board" className={linkClass} activeProps={activeProps}>Board</Link>
           <Link to="/support" search={{}} className={linkClass} activeProps={activeProps}>Support</Link>
+          {email && (
+            <span className="flex items-center gap-1.5">
+              {isAdmin && <SupporterBadge variant="admin" />}
+              {isSupporter && <SupporterBadge variant="supporter" />}
+              {isRegistryMember && <SupporterBadge variant="registry_member" />}
+            </span>
+          )}
           {email ? (
             <button onClick={() => supabase.auth.signOut()} className={linkClass}>Sign out</button>
           ) : (
