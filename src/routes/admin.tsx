@@ -128,6 +128,41 @@ function AdminPage() {
   );
 }
 
+function TaxCodesButton() {
+  const [state, setState] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    setState(null);
+    try {
+      const res = await applyStripeTaxCodes({ data: { environment: getStripeEnvironment() } });
+      if ("error" in res) setState({ msg: res.error, ok: false });
+      else setState({ msg: `Updated ${res.updated.length} product(s).`, ok: true });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-6 rounded-sm border border-dashed border-border p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={run}
+          disabled={busy}
+          className="rounded-sm border border-foreground px-3 py-1.5 text-[11px] tracking-[0.18em] uppercase hover:bg-foreground hover:text-background disabled:opacity-50"
+        >
+          {busy ? "Applying…" : "Apply Stripe tax codes"}
+        </button>
+        <span className="text-xs text-muted-foreground">
+          Idempotent — assigns SaaS / digital-goods tax codes to all catalog products.
+        </span>
+      </div>
+      {state && (
+        <p className={`mt-2 text-xs ${state.ok ? "text-[#1E5637]" : "text-red-700"}`}>{state.msg}</p>
+      )}
+    </div>
+  );
+}
+
 function AdminRow({
   item,
   totals,
