@@ -201,15 +201,27 @@ function SupportPage() {
 
         {isActive && sub && (
           <div className="mt-8 rounded-md border border-border bg-secondary/40 p-5">
-            <p className="text-sm">
-              You&apos;re a supporter ({sub.price_id.replace("supporter_", "")}).{" "}
-              {sub.cancel_at_period_end && sub.current_period_end && (
-                <span>Access continues until {new Date(sub.current_period_end).toLocaleDateString()}. </span>
-              )}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm">
+                You&apos;re a supporter ({sub.price_id.replace("supporter_", "")}).{" "}
+                {sub.cancel_at_period_end && sub.current_period_end && (
+                  <span>Access continues until {new Date(sub.current_period_end).toLocaleDateString()}. </span>
+                )}
+              </p>
+              {isSupporter && <SupporterBadge variant="supporter" />}
+              {isRegistryMember && <SupporterBadge variant="registry_member" />}
+            </div>
             <button onClick={openPortal} className="mt-3 text-xs uppercase tracking-[0.18em] underline">
               Manage subscription
             </button>
+          </div>
+        )}
+
+        {!isActive && isRegistryMember && (
+          <div className="mt-8 rounded-md border border-border bg-secondary/40 p-5">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              You have full registry access. <SupporterBadge variant="registry_member" />
+            </div>
           </div>
         )}
 
