@@ -107,6 +107,9 @@ function AdminPage() {
           Testing board — admin.
         </h1>
 
+        <TaxCodesButton />
+
+
         <div className="mt-8 space-y-6">
           {items.map((item: any) => (
             <AdminRow
