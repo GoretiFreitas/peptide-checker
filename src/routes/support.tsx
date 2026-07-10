@@ -270,10 +270,94 @@ function SupportPage() {
 
         {error && <p className="mt-6 text-sm text-red-700">{error}</p>}
 
+        {userId && purchasesQ.data && "purchases" in purchasesQ.data && purchasesQ.data.purchases.length > 0 && (
+          <PurchaseHistory rows={purchasesQ.data.purchases as PurchaseRow[]} env={env} />
+        )}
+
         <p className="mt-16 text-xs text-muted-foreground">
           <Link to="/board" className="underline">Or fund a specific product test on the board →</Link>
         </p>
       </main>
     </div>
+  );
+}
+
+type PurchaseRow = {
+  id: string;
+  created_at: string;
+  kind: string;
+  product_id: string;
+  price_id: string | null;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  refunded_cents: number;
+};
+
+function PurchaseHistory({ rows, env }: { rows: PurchaseRow[]; env: "sandbox" | "live" }) {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const openReceipt = async (purchaseId: string) => {
+    setLoadingId(purchaseId);
+    try {
+      const res = await getReceiptUrl({ data: { purchaseId, environment: env } });
+      if ("url" in res) window.open(res.url, "_blank");
+      else alert(res.error);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+  const money = (c: number, cur: string) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: cur.toUpperCase() }).format(c / 100);
+  const kindLabel: Record<string, string> = {
+    donation: "Donation",
+    registry: "Registry access",
+    subscription_charge: "Supporter membership",
+    other: "Purchase",
+  };
+  return (
+    <section className="mt-16">
+      <h2 className="font-serif text-2xl">Your purchases</h2>
+      <div className="mt-4 overflow-x-auto rounded-sm border border-border">
+        <table className="min-w-full text-sm">
+          <thead className="bg-secondary/40 text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 text-left">Date</th>
+              <th className="px-3 py-2 text-left">Item</th>
+              <th className="px-3 py-2 text-right">Amount</th>
+              <th className="px-3 py-2 text-left">Status</th>
+              <th className="px-3 py-2 text-left">Receipt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className="px-3 py-2 text-muted-foreground">
+                  {new Date(r.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-3 py-2">{kindLabel[r.kind] ?? r.product_id}</td>
+                <td className="px-3 py-2 text-right">{money(r.amount_cents, r.currency)}</td>
+                <td className="px-3 py-2">
+                  {r.status}
+                  {r.refunded_cents > 0 && (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      (−{money(r.refunded_cents, r.currency)})
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => openReceipt(r.id)}
+                    disabled={loadingId === r.id}
+                    className="text-xs uppercase tracking-[0.18em] underline disabled:opacity-50"
+                  >
+                    {loadingId === r.id ? "…" : "View"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
