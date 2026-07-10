@@ -187,10 +187,7 @@ export const getReceiptUrl = createServerFn({ method: "POST" })
 export const getFullReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ itemId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }): Promise<
-    | { report: { item: unknown; result: unknown } }
-    | { error: string }
-  > => {
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: roles } = await supabase
       .from("user_roles")
@@ -198,7 +195,7 @@ export const getFullReport = createServerFn({ method: "POST" })
       .eq("user_id", userId);
     const has = new Set((roles ?? []).map((r: { role: string }) => r.role));
     if (!has.has("registry_member") && !has.has("admin")) {
-      return { error: "Registry access required" };
+      return { error: "Registry access required" as const };
     }
     const [{ data: item }, { data: result }] = await Promise.all([
       supabase.from("board_items").select("*").eq("id", data.itemId).maybeSingle(),
@@ -209,7 +206,7 @@ export const getFullReport = createServerFn({ method: "POST" })
         .not("published_at", "is", null)
         .maybeSingle(),
     ]);
-    if (!item || !result) return { error: "Report not found" };
+    if (!item || !result) return { error: "Report not found" as const };
     return { report: { item, result } };
   });
 
