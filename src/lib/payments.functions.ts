@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type Stripe from "stripe";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   type StripeEnv,
@@ -73,7 +74,7 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
         : price.product;
       const productName = (product as { name?: string }).name ?? "Purchase";
 
-      const session = await stripe.checkout.sessions.create({
+      const params: Stripe.Checkout.SessionCreateParams = {
         line_items: [{ price: price.id, quantity: 1 }],
         mode: isRecurring ? "subscription" : "payment",
         ui_mode: "embedded_page",
@@ -83,7 +84,12 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
           ? { subscription_data: { metadata: { userId } } }
           : { payment_intent_data: { description: productName } }),
         metadata: { userId, kind: isRecurring ? "subscription" : "one_time" },
-      });
+      };
+      // Full compliance handling (tax + fraud + disputes + support).
+      // Not part of the pinned SDK type — cast to satisfy TS.
+      (params as Record<string, unknown>).managed_payments = { enabled: true };
+
+      const session = await stripe.checkout.sessions.create(params);
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
@@ -119,6 +125,141 @@ export const createPortalSession = createServerFn({ method: "POST" })
       return { url: portal.url };
     } catch (error) {
       console.error("createPortalSession error", error);
+      return { error: getStripeErrorMessage(error) };
+    }
+  });
+
+/** List the signed-in user's purchases in the current environment. */
+export const getMyPurchases = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ environment: envSchema }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("purchases")
+      .select(
+        "id, created_at, kind, product_id, price_id, amount_cents, currency, status, refunded_cents, stripe_payment_intent_id, stripe_checkout_session_id",
+      )
+      .eq("user_id", userId)
+      .eq("environment", data.environment)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) return { purchases: [], error: error.message };
+    return { purchases: rows ?? [] };
+  });
+
+/** Get the Stripe-hosted receipt URL for one of the signed-in user's purchases. */
+export const getReceiptUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ purchaseId: z.string().uuid(), environment: envSchema }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
+    try {
+      const { supabase, userId } = context;
+      const { data: p } = await supabase
+        .from("purchases")
+        .select("stripe_payment_intent_id, user_id, environment")
+        .eq("id", data.purchaseId)
+        .maybeSingle();
+      if (!p || p.user_id !== userId || p.environment !== data.environment) {
+        return { error: "Not found" };
+      }
+      if (!p.stripe_payment_intent_id) return { error: "No receipt available" };
+      const stripe = createStripeClient(data.environment);
+      const pi = await stripe.paymentIntents.retrieve(p.stripe_payment_intent_id, {
+        expand: ["latest_charge"],
+      });
+      const charge = pi.latest_charge as Stripe.Charge | null;
+      const url = charge?.receipt_url ?? null;
+      if (!url) return { error: "No receipt yet" };
+      return { url };
+    } catch (error) {
+      return { error: getStripeErrorMessage(error) };
+    }
+  });
+
+/**
+ * Return the full published test report for a board item. Requires the caller
+ * to hold either `registry_member` or `admin` role. Non-members should call
+ * the public `getItem` for the redacted view.
+ */
+export const getFullReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const has = new Set((roles ?? []).map((r: { role: string }) => r.role));
+    if (!has.has("registry_member") && !has.has("admin")) {
+      return { error: "Registry access required" as const };
+    }
+    const [{ data: item }, { data: result }] = await Promise.all([
+      supabase.from("board_items").select("*").eq("id", data.itemId).maybeSingle(),
+      supabase
+        .from("results")
+        .select("*")
+        .eq("item_id", data.itemId)
+        .not("published_at", "is", null)
+        .maybeSingle(),
+    ]);
+    if (!item || !result) return { error: "Report not found" as const };
+    return { report: { item, result } };
+  });
+
+/**
+ * One-time setup: set Stripe tax codes on our products so full compliance
+ * handling can classify them. Idempotent; admin-only.
+ */
+export const applyStripeTaxCodes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ environment: envSchema }).parse(d))
+  .handler(async ({ data, context }): Promise<{ updated: string[] } | { error: string }> => {
+    const { supabase, userId } = context;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin");
+    if (!roles || roles.length === 0) return { error: "Admins only" };
+    try {
+      const stripe = createStripeClient(data.environment);
+      // Look up each product by lookup_key on any of its prices.
+      const priceKeys = [
+        "supporter_monthly",
+        "supporter_yearly",
+        "donate_10",
+        "donate_25",
+        "donate_100",
+        "registry_full_500",
+      ];
+      // txcd_10103001 = SaaS / electronic services (for supporter memberships)
+      // txcd_10000000 = general digital goods (donations & registry unlock)
+      const taxCodeByPriceKey: Record<string, string> = {
+        supporter_monthly: "txcd_10103001",
+        supporter_yearly: "txcd_10103001",
+        donate_10: "txcd_10000000",
+        donate_25: "txcd_10000000",
+        donate_100: "txcd_10000000",
+        registry_full_500: "txcd_10000000",
+      };
+      const updated: string[] = [];
+      const seenProducts = new Set<string>();
+      for (const key of priceKeys) {
+        const list = await stripe.prices.list({ lookup_keys: [key], limit: 1 });
+        const price = list.data[0];
+        if (!price) continue;
+        const productId = typeof price.product === "string" ? price.product : price.product.id;
+        if (seenProducts.has(productId)) continue;
+        seenProducts.add(productId);
+        await stripe.products.update(productId, { tax_code: taxCodeByPriceKey[key] });
+        updated.push(`${productId}=${taxCodeByPriceKey[key]}`);
+      }
+      return { updated };
+    } catch (error) {
       return { error: getStripeErrorMessage(error) };
     }
   });

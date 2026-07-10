@@ -2,16 +2,24 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRoles } from "@/hooks/useUserRoles";
+import { SupporterBadge } from "@/components/SupporterBadge";
 
 export function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const { isSupporter, isRegistryMember, isAdmin } = useUserRoles(userId);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? null);
+      setUserId(data.user?.id ?? null);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         setEmail(session?.user?.email ?? null);
+        setUserId(session?.user?.id ?? null);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -31,6 +39,13 @@ export function SiteHeader() {
           <Link to="/" className={linkClass} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
           <Link to="/board" className={linkClass} activeProps={activeProps}>Board</Link>
           <Link to="/support" search={{}} className={linkClass} activeProps={activeProps}>Support</Link>
+          {email && (
+            <span className="flex items-center gap-1.5">
+              {isAdmin && <SupporterBadge variant="admin" />}
+              {isSupporter && <SupporterBadge variant="supporter" />}
+              {isRegistryMember && <SupporterBadge variant="registry_member" />}
+            </span>
+          )}
           {email ? (
             <button onClick={() => supabase.auth.signOut()} className={linkClass}>Sign out</button>
           ) : (
