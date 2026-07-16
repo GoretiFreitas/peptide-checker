@@ -105,36 +105,7 @@
   --badge-neutral-fg: oklch(0.82 0.008 85);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --background: oklch(0.19 0.015 265);
-    --foreground: oklch(0.94 0.008 85);
-    --card: oklch(0.24 0.018 265);
-    --card-foreground: oklch(0.94 0.008 85);
-    --popover: oklch(0.24 0.018 265);
-    --popover-foreground: oklch(0.94 0.008 85);
-    --primary: oklch(0.9 0.008 85);
-    --primary-foreground: oklch(0.24 0.018 265);
-    --secondary: oklch(0.28 0.018 265);
-    --secondary-foreground: oklch(0.94 0.008 85);
-    --muted: oklch(0.28 0.018 265);
-    --muted-foreground: oklch(0.7 0.012 260);
-    --accent: oklch(0.62 0.08 175);
-    --accent-foreground: oklch(0.19 0.015 265);
-    --border: oklch(0.34 0.02 265);
-    --input: oklch(0.34 0.02 265);
-    --ring: oklch(0.55 0.02 260);
-
-    --badge-ok-bg: oklch(0.3 0.04 155);
-    --badge-ok-fg: oklch(0.86 0.06 155);
-    --badge-warn-bg: oklch(0.3 0.05 70);
-    --badge-warn-fg: oklch(0.88 0.08 85);
-    --badge-fail-bg: oklch(0.3 0.06 25);
-    --badge-fail-fg: oklch(0.88 0.09 30);
-    --badge-neutral-bg: oklch(0.3 0.008 265);
-    --badge-neutral-fg: oklch(0.82 0.008 85);
-  }
-}
+/* Dark mode is opt-in via the .dark class only; do not auto-switch on prefers-color-scheme. */
 
 @layer base {
   * {
