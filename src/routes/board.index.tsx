@@ -129,7 +129,6 @@ function BoardIndex() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               to="/board/nominate"
-              search={{}}
               className="inline-flex items-center justify-center rounded-md bg-foreground px-5 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background shadow-sm transition-colors hover:bg-foreground/90"
             >
               Nominate a batch
