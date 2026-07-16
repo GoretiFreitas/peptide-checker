@@ -25,9 +25,19 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
     sb.from("board_items").select("*").order("created_at", { ascending: false }),
     sb.from("item_funding_totals").select("*"),
   ]);
+  const itemRows = items.data ?? [];
+  // Fetch anonymized backer strip for each item in parallel via SECURITY DEFINER rpc.
+  const backersByItem: Record<string, Array<{ amount_cents: number; created_at: string; initial: string }>> = {};
+  await Promise.all(
+    itemRows.map(async (it: any) => {
+      const { data } = await (sb.rpc as any)("list_item_backers", { _item_id: it.id, _limit: 12 });
+      backersByItem[it.id] = (data as any) ?? [];
+    }),
+  );
   return {
-    items: items.data ?? [],
+    items: itemRows,
     totals: totals.data ?? [],
+    backers: backersByItem,
   };
 });
 
