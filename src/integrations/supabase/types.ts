@@ -445,7 +445,14 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      list_item_backers: {
+        Args: { _item_id: string; _limit?: number }
+        Returns: {
+          amount_cents: number
+          created_at: string
+          initial: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "supporter" | "registry_member"
