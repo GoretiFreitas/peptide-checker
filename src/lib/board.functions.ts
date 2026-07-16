@@ -25,9 +25,19 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
     sb.from("board_items").select("*").order("created_at", { ascending: false }),
     sb.from("item_funding_totals").select("*"),
   ]);
+  const itemRows = items.data ?? [];
+  // Fetch anonymized backer strip for each item in parallel via SECURITY DEFINER rpc.
+  const backersByItem: Record<string, Array<{ amount_cents: number; created_at: string; initial: string }>> = {};
+  await Promise.all(
+    itemRows.map(async (it: any) => {
+      const { data } = await (sb.rpc as any)("list_item_backers", { _item_id: it.id, _limit: 12 });
+      backersByItem[it.id] = (data as any) ?? [];
+    }),
+  );
   return {
-    items: items.data ?? [],
+    items: itemRows,
     totals: totals.data ?? [],
+    backers: backersByItem,
   };
 });
 
@@ -106,20 +116,24 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         amount_cents: z.number().int().min(500).max(500000),
         return_url: z.string().url(),
         environment: z.enum(["sandbox", "live"]),
+        us_shipping_ack: z.boolean().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<{ clientSecret: string } | { error: string }> => {
     try {
       // Verify item is in a fundable state
-      const { data: item } = await context.supabase
-        .from("board_items")
-        .select("id, state, product_name")
+      const { data: item } = await (context.supabase
+        .from("board_items") as any)
+        .select("id, state, product_name, us_only, lab")
         .eq("id", data.item_id)
         .maybeSingle();
       if (!item) return { error: "Item not found" };
       if (item.state !== "funding" && item.state !== "nominated") {
         return { error: "This item is not currently accepting pledges." };
+      }
+      if (item.us_only && !data.us_shipping_ack) {
+        return { error: "This campaign requires a US-shipping confirmation." };
       }
 
       // Insert pending pledge

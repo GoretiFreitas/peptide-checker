@@ -40,11 +40,14 @@ export type Database = {
       }
       board_items: {
         Row: {
+          batch_id: string | null
+          coa_url: string | null
           created_at: string
           description: string | null
           funding_deadline: string | null
           goal_cents: number | null
           id: string
+          lab: string
           nominated_by: string | null
           operations_margin_cents: number
           product_name: string
@@ -55,14 +58,19 @@ export type Database = {
           state: Database["public"]["Enums"]["board_state"]
           test_battery: Json
           test_cost_cents: number
+          thumbnail_url: string | null
           updated_at: string
+          us_only: boolean
         }
         Insert: {
+          batch_id?: string | null
+          coa_url?: string | null
           created_at?: string
           description?: string | null
           funding_deadline?: string | null
           goal_cents?: number | null
           id?: string
+          lab?: string
           nominated_by?: string | null
           operations_margin_cents?: number
           product_name: string
@@ -73,14 +81,19 @@ export type Database = {
           state?: Database["public"]["Enums"]["board_state"]
           test_battery?: Json
           test_cost_cents?: number
+          thumbnail_url?: string | null
           updated_at?: string
+          us_only?: boolean
         }
         Update: {
+          batch_id?: string | null
+          coa_url?: string | null
           created_at?: string
           description?: string | null
           funding_deadline?: string | null
           goal_cents?: number | null
           id?: string
+          lab?: string
           nominated_by?: string | null
           operations_margin_cents?: number
           product_name?: string
@@ -91,7 +104,9 @@ export type Database = {
           state?: Database["public"]["Enums"]["board_state"]
           test_battery?: Json
           test_cost_cents?: number
+          thumbnail_url?: string | null
           updated_at?: string
+          us_only?: boolean
         }
         Relationships: []
       }
@@ -283,6 +298,7 @@ export type Database = {
         Row: {
           batch_id: string | null
           created_at: string
+          findings: Json
           id: string
           item_id: string
           lab_name: string | null
@@ -299,6 +315,7 @@ export type Database = {
         Insert: {
           batch_id?: string | null
           created_at?: string
+          findings?: Json
           id?: string
           item_id: string
           lab_name?: string | null
@@ -315,6 +332,7 @@ export type Database = {
         Update: {
           batch_id?: string | null
           created_at?: string
+          findings?: Json
           id?: string
           item_id?: string
           lab_name?: string | null
@@ -427,7 +445,14 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      list_item_backers: {
+        Args: { _item_id: string; _limit?: number }
+        Returns: {
+          amount_cents: number
+          created_at: string
+          initial: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "supporter" | "registry_member"

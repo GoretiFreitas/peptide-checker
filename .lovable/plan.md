@@ -1,104 +1,63 @@
+## Goal
+Expand `/board` into a richer crowdfunded testing board with two lab variants (Janoshik, Finnrick), tier-unlock ladders, backer avatars, a results panel, and a "How funding targets are set" reference — while keeping the existing DB-backed pledge + Stripe manual-capture flow already wired up in `src/lib/board.functions.ts` and the webhook.
 
-# "Test This Next" — Community Testing Board
+## Scope
+Frontend + light schema additions. No changes to Stripe integration, auth, or webhook logic.
 
-Adds a public crowdfunded testing board to the existing Certificate Checker. Anyone can browse product nominations, pledge money toward independent testing, and read published results. Pledges are held on Stripe with all-or-nothing capture. Certificate-checker nominations flow into the board.
+## 1. Schema additions (migration)
+Extend `board_items` with:
+- `lab` text — `'janoshik' | 'finnrick'`
+- `us_only` boolean (Finnrick campaigns)
+- `thumbnail_url` text
+- `deadline` timestamptz (already have `funding_deadline`; reuse)
+- `coa_url` text — link to lab's public report when results publish
 
-## What gets built
+Extend `board_stretch_goals` (already exists) usage:
+- Treat as ordered tiers with `name`, `threshold_cents`, plus derived `unlocked` from current raised.
 
-### New pages (public, shareable, own OG tags)
-- `/board` — the board. Filter chips: Nominated · Funding · Funded · Procuring · Testing · Published · Expired. Item cards show product name, seller, state, funding bar, goal breakdown line, pledger count.
-- `/board/$itemId` — item detail. State timeline, full goal breakdown (sample + test + operations margin), stretch tiers, pledger list (handles only), pledge form, discussion-free (comments out of scope).
-- `/board/nominate` — nominate a product (name, seller, source URL, notes).
-- `/registry/$itemId` — the published result page (permanent, shareable, plain-language report + fixed disclaimer). Appears only once state = Published.
-- `/board/backer` — signed-in backers see their own pledges and status.
-- Existing `/` (Certificate Checker) — unchanged, except its "Nominate for independent testing" button now creates a real board nomination (requires sign-in; unauthenticated users get a "Sign in to nominate" CTA).
+Add optional column `pledges.display_handle` (fallback to profiles.handle) so avatars/backer list render without extra join contortion. (Or just join `profiles` — decide: join `profiles`.)
 
-Global nav gains three links: Checker · Board · Registry.
+Seed a couple of demo campaigns (one Janoshik, one Finnrick) with their tier rows.
 
-### Roles
-- **Anyone (signed out):** browse board, browse registry, read published reports.
-- **Backer (email + Google sign-in):** nominate, pledge, view own pledges.
-- **Admin (manual role grant via `user_roles`):** move items between states, set goals & test batteries, sign off adverse results, mark procured / tested / published, upload the final report.
+## 2. Server functions (`src/lib/board.functions.ts`)
+- Extend `getBoard` to also return per-item tiers and a backer list (handle + amount + created_at, top N).
+- No changes to `createPledgeCheckout` — already manual-capture with metadata; already gated by state.
+- Add validation: if `us_only`, require a checkbox confirmation flag in the checkout input (`us_shipping_ack: true`).
 
-### Item states (fixed, exactly as spec)
-Nominated → Funding → Funded → Procuring → Testing → Published, plus Expired / Refunded terminal state. Only admins transition; the app enforces legal transitions.
+## 3. `/board` UI (`src/routes/board.index.tsx`)
+Rebuild card rendering to include:
 
-### Funding & payments
-- Stripe (Lovable-managed seamless integration) — real payments. Full compliance handling not applicable to this offering (it's commissioning a service), so tax setup will be **tax calculation and collection only**.
-- Pledges use Stripe **PaymentIntents with `capture_method: manual`** — authorization only, no charge. When the item reaches its goal, admin action captures all successful auths; when it expires or fails procurement, all auths are cancelled → automatic release. This is the correct primitive for all-or-nothing pledges on Stripe.
-- Card auths only hold ~7 days. So Funding items have a max **14-day funding window** with a rolling re-auth reminder to backers if not yet funded; expired auths are auto-cancelled and the pledger re-authorizes.
-- Backers see: "Your card is authorized, not charged. You are only charged if this test is fully funded."
-- Surplus above goal flows to a visible community fund (single row we track and display on the board footer).
+- **Header**: mission line + "Some batches fund in under 40 pledges."
+- **Grid** of cards with three visual states driven by `state`:
+  - `funding` / `nominated` → progress bar + tier ladder + pledge chips
+  - `procuring` / `testing` → "Testing in progress" state, ladder frozen at reached tiers
+  - `published` → results panel replaces ladder
+- **Card contents**:
+  - Peptide name, vendor, batch ID, thumbnail
+  - Lab badge: "Janoshik · ships worldwide" or "Finnrick · US only"
+  - Progress bar `$raised / $goal` + backer count
+  - Tier ladder: each tier row with lock/unlock icon, name, cumulative threshold; animated unlock when `raised >= threshold`
+  - Backer avatars strip (initials chips) + expandable full list with amounts
+  - Trust note: sealed-vial statement
+- **Results panel** (when published + result row exists): purity %, endotoxin EU/vial, heavy metals pass/fail, sterility pass/fail, COA link. Pull structured findings from `results` table — add optional JSON column `findings` if not present, otherwise parse `summary`.
+- **Pledge flow**: modal with preset chips $5/$10/$25/$50 ($5 highlighted) + custom amount. For Finnrick cards, checkbox "I confirm the vial ships from within the US." Reuses existing `createPledgeCheckout` + embedded Stripe Checkout.
+- **Disclaimer** under button and expandable **"How funding targets are set"** panel with Janoshik + Finnrick pricing reference text.
 
-### Integrity rules (rendered in every item detail + registry page)
-Fixed text block, always present:
-1. The cooperative buys samples anonymously — pledgers and sellers never supply the vial.
-2. Every funded test is published, whatever the outcome.
-3. Results are tied to a specific batch and date.
-4. Adverse results are signed off by a named human reviewer before publishing.
-5. Funding a test never influences the result.
+## 4. Aesthetic
+Muted navy/ivory palette via existing tokens in `src/styles.css` (add `--ivory`, `--navy-deep`, `--navy-muted` if missing). Rounded cards, subtle shadow, generous spacing, framer-motion or CSS transitions on progress bar fill and tier unlock (green check swap-in).
 
-### Reused disclaimer
-The existing checker disclaimer text appears on every registry page.
+## 5. Out of scope
+- No changes to auth, webhook, or MCP.
+- No new Stripe products.
+- No admin UI changes beyond letting admin set `lab`, `us_only`, `thumbnail_url`, `coa_url` via existing `adminSetItem` (extend input schema).
 
-## Data model (Lovable Cloud)
+## Technical notes
+- `findings` JSONB column on `results` (nullable) so the published card can render structured metrics without regex on `summary`.
+- Tier "unlocked" is derived client-side: `raised_cents >= tier.threshold_cents`. Persist tiers per item; do not hardcode in the component (spec says editable, but keeping in DB matches existing admin flow — the two seeded campaigns act as the reference).
+- Backer avatars: initials from `profiles.handle`; if user opted anonymous, show "Backer".
 
-```text
-profiles            id (=auth.users.id), handle, created_at
-user_roles          user_id, role ('admin')                              -- separate table, per rules
-board_items        id, product_name, seller, source_url, sequence?, state,
-                    goal_cents, sample_cost_cents, test_cost_cents,
-                    operations_margin_cents, test_battery (jsonb),
-                    funding_deadline, nominated_by, created_at, updated_at
-board_stretch_goals item_id, label, add_cost_cents, unlocked
-pledges             id, item_id, user_id, amount_cents,
-                    stripe_payment_intent_id, status
-                       ('authorized'|'captured'|'cancelled'|'failed'),
-                    created_at
-results             item_id, batch_id, sampled_at, tested_at, lab_name,
-                    report_url (Storage), summary, verdict, signed_off_by,
-                    published_at
-community_fund      single row: total_cents (updated on capture)
-```
-
-RLS: everything scoped. Anyone can SELECT `board_items` and `results` where state indicates public visibility. Backers see their own `pledges`. Admins do everything through `has_role(auth.uid(), 'admin')`.
-
-## Server surface
-
-- `nominateItem` — create Nominated row.
-- `createPledge` — create Stripe PaymentIntent (manual capture), return `client_secret`, store row as `authorized` on webhook confirmation.
-- `getBoard` / `getItem` / `getRegistry` — public reads via publishable client + `TO anon` policies.
-- `getMyPledges` — auth read.
-- Admin: `setGoal`, `transitionState`, `captureAllPledges`, `cancelAllPledges`, `publishResult`, `signOffAdverseResult`.
-- Webhook: `POST /api/public/webhooks/stripe` — verifies signature; updates pledge status on `payment_intent.amount_capturable_updated`, `.canceled`, `.succeeded`.
-
-## AI (per spec: "AI agent runs the board")
-
-Uses existing Lovable AI Gateway (Gemini). Server functions:
-- `draftItemDescription({ productName, seller, notes })` — plain description for admin review.
-- `suggestGoalBreakdown({ productName, testBattery })` — pulls from a small table of test costs seeded in migration.
-- `draftResultReport({ result })` — plain-language report from raw lab values, routed for human sign-off before publish.
-
-All AI outputs are drafts an admin approves; nothing publishes autonomously.
-
-## Design
-
-Keep the existing warm-ivory + serif-display palette. Board is a restrained card list, not a Kickstarter grid. Funding bars are thin taupe with a teal fill (`#0F7B6C`), never over-saturated. State badges use the existing pale-fill / dark-same-family-text badge system. Registry pages read like a published lab report.
-
-Dark mode: the existing tokens carry through.
-
-## Build order
-
-1. Enable Lovable Cloud, add profiles + auth (email + Google), `user_roles`, `has_role`.
-2. Run `recommend_payment_provider`, then enable seamless Stripe with tax calculation and collection only.
-3. Migrations: all tables above + RLS + grants + seed 3 demo items (one Funding, one Funded, one Published with a signed-off result) so the board is never empty.
-4. Board list + item detail (read-only public reads).
-5. Nominate flow (signed-in). Wire the checker's nominate button to it.
-6. Pledge flow with Stripe manual-capture PaymentIntents + webhook.
-7. Admin console (single `/admin` route under `_authenticated`, gated by `has_role`) for state transitions, goal editing, capture/cancel, publish.
-8. Registry page + AI report drafting.
-9. Community fund totals + honest framing block sitewide.
-
-## Explicitly out of scope
-
-Comments/discussion, on-chain escrow (spec calls it optional, later), refunds outside auto-cancel, email notifications beyond Supabase auth mail, and mobile app.
+## Deliverables
+1. Migration: add columns + seed 2 demo campaigns with tiers.
+2. `board.functions.ts`: extend `getBoard`, `adminSetItem`, `createPledgeCheckout` input.
+3. `board.index.tsx`: full UI rebuild per spec.
+4. Small components: `TierLadder`, `BackerStrip`, `ResultsPanel`, `HowFundingWorks`.
