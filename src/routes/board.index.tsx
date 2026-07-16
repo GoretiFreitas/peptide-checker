@@ -11,20 +11,26 @@ import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 
 // -------------------------------------------------------------------
-// Config — edit tier thresholds and default lab pricing here.
-// Cumulative thresholds mirror Janoshik's à la carte pricing.
+// Tier ladders per lab. Cumulative thresholds — a tier "unlocks" when
+// pledged funds cross its threshold.
 // -------------------------------------------------------------------
-type Tier = { key: string; name: string; threshold_cents: number; hint: string };
-const TIERS: Tier[] = [
-  { key: "purity", name: "Purity + quantity", threshold_cents: 30000, hint: "HPLC assay" },
-  { key: "endotoxin", name: "+ Endotoxin (LAL)", threshold_cents: 48000, hint: "Limulus amebocyte lysate" },
-  { key: "heavy_metals", name: "+ Heavy metals (As, Cd, Pb, Hg)", threshold_cents: 55000, hint: "ICP-MS" },
-  { key: "sterility", name: "+ Sterility (TAMC + TYMC) — Full panel", threshold_cents: 82800, hint: "Complete safety panel" },
+type Tier = { key: string; name: string; threshold_cents: number; free?: boolean };
+
+const JANOSHIK_TIERS: Tier[] = [
+  { key: "purity", name: "Purity + quantity", threshold_cents: 30000 },
+  { key: "endotoxin", name: "+ Endotoxin (LAL)", threshold_cents: 48000 },
+  { key: "heavy_metals", name: "+ Heavy metals (As, Cd, Pb, Hg)", threshold_cents: 55000 },
+  { key: "sterility", name: "+ Sterility (TAMC + TYMC) — Full panel", threshold_cents: 82800 },
 ];
 
-const PRESET_PLEDGES = [1000, 2500, 5000, 10000] as const;
+const FINNRICK_TIERS: Tier[] = [
+  { key: "purity", name: "Purity + safety test", threshold_cents: 0, free: true },
+  { key: "endotoxin", name: "+ Endotoxin analysis", threshold_cents: 11000 },
+  { key: "heavy_metals", name: "+ Heavy metals analysis", threshold_cents: 18000 },
+];
 
-const DEFAULT_LAB = "Janoshik International";
+const PRESET_PLEDGES = [500, 1000, 2500, 5000] as const;
+const DEFAULT_PLEDGE = 500;
 
 // -------------------------------------------------------------------
 
@@ -65,6 +71,15 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function tiersFor(lab: string): Tier[] {
+  return lab === "finnrick" ? FINNRICK_TIERS : JANOSHIK_TIERS;
+}
+
+function labBadge(lab: string, us_only: boolean) {
+  if (lab === "finnrick") return { label: "Finnrick · US only", tone: "us" as const };
+  return { label: "Janoshik · ships worldwide", tone: "intl" as const };
+}
+
 const stateStyle: Record<string, { label: string; className: string }> = {
   nominated: { label: "Nominated", className: "bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-fg)]" },
   funding: { label: "Funding", className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]" },
@@ -84,6 +99,7 @@ function BoardIndex() {
     () => new Map((board.data?.totals ?? []).map((t: any) => [t.item_id, t])),
     [board.data?.totals],
   );
+  const backersById = (board.data as any)?.backers ?? {};
 
   const [pledgeFor, setPledgeFor] = useState<string | null>(null);
   const [howOpen, setHowOpen] = useState(false);
@@ -105,7 +121,10 @@ function BoardIndex() {
           <p className="mt-5 max-w-[60ch] text-[15px] leading-relaxed text-foreground">
             Each campaign funds an independent lab test of one specific peptide batch. Back a
             campaign and — if it hits its goal — the batch is sent to a third‑party lab, results
-            published for every backer. Nobody has to gamble on an untested vial.
+            published for every backer.
+          </p>
+          <p className="mt-3 text-[13px] italic text-muted-foreground">
+            Some batches fund in under 40 pledges.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
@@ -153,16 +172,16 @@ function BoardIndex() {
                   Finnrick · US only
                 </div>
                 <ul className="mt-3 space-y-1.5 text-sm text-foreground">
-                  <li>Purity — free</li>
+                  <li>Purity — free (Finnrick‑funded)</li>
                   <li>Endotoxin — ~$110</li>
-                  <li>Heavy metals — add‑on</li>
+                  <li>Heavy metals — add‑on (~$70)</li>
+                  <li className="text-muted-foreground">A handful of $5 backers can fully fund one Finnrick campaign.</li>
                 </ul>
               </div>
             </div>
             <p className="mt-5 text-xs text-muted-foreground">
-              Campaign goals equal the cumulative cost of the full 4‑tier panel plus sample
-              procurement and operations. Any surplus rolls into the community fund and back into
-              new tests.
+              Campaign goals equal the cumulative cost of the tier ladder plus sample procurement
+              and operations. Any surplus rolls into the community fund and back into new tests.
             </p>
           </section>
         )}
@@ -192,7 +211,8 @@ function BoardIndex() {
                 <CampaignCard
                   key={item.id}
                   item={item}
-                  totals={totalsById.get(item.id) ?? { pledged_cents: 0, backers: 0 }}
+                  totals={totalsById.get(item.id) ?? { pledged_cents: 0, backer_count: 0 }}
+                  backers={backersById[item.id] ?? []}
                   onBack={() => setPledgeFor(item.id)}
                 />
               ))}
@@ -219,21 +239,30 @@ function BoardIndex() {
 // Campaign card
 // -------------------------------------------------------------------
 
+type Backer = { amount_cents: number; created_at: string; initial: string };
+
 function CampaignCard({
   item,
   totals,
+  backers,
   onBack,
 }: {
   item: any;
-  totals: { pledged_cents: number; backers: number };
+  totals: { pledged_cents: number; backer_count: number };
+  backers: Backer[];
   onBack: () => void;
 }) {
-  const goal = item.goal_cents ?? TIERS[TIERS.length - 1].threshold_cents;
+  const lab: string = item.lab ?? "janoshik";
+  const usOnly: boolean = !!item.us_only;
+  const tiers = tiersFor(lab);
+  const badge = labBadge(lab, usOnly);
+
+  const goal = item.goal_cents ?? tiers[tiers.length - 1].threshold_cents;
   const raised = totals.pledged_cents ?? 0;
   const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 
   const state = item.state as string;
-  const badge = stateStyle[state] ?? stateStyle.nominated;
+  const stateBadge = stateStyle[state] ?? stateStyle.nominated;
   const canBack = state === "funding" || state === "nominated";
   const isPublished = state === "published";
   const isTesting = state === "testing" || state === "procuring" || state === "funded";
@@ -242,18 +271,31 @@ function CampaignCard({
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       {/* Thumbnail */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gradient-to-br from-[oklch(0.94_0.02_260)] to-[oklch(0.97_0.015_90)]">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-serif text-6xl tracking-tight text-primary/25">
-            {initials(item.product_name)}
+        {item.thumbnail_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.thumbnail_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="font-serif text-6xl tracking-tight text-primary/25">
+              {initials(item.product_name)}
+            </span>
+          </div>
+        )}
+        <div className="absolute left-4 top-4">
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[0.14em] uppercase ${stateBadge.className}`}>
+            {stateBadge.label}
           </span>
         </div>
-        <div className="absolute left-4 top-4">
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[0.14em] uppercase ${badge.className}`}>
+        <div className="absolute right-4 top-4">
+          <span
+            className={`rounded-full border px-2.5 py-1 text-[10px] font-medium tracking-[0.14em] uppercase backdrop-blur-sm ${
+              badge.tone === "us"
+                ? "border-[color:var(--badge-warn-fg)]/30 bg-[color:var(--badge-warn-bg)]/80 text-[color:var(--badge-warn-fg)]"
+                : "border-border bg-card/80 text-foreground"
+            }`}
+          >
             {badge.label}
           </span>
-        </div>
-        <div className="absolute right-4 top-4 text-right text-[10px] tracking-[0.14em] uppercase text-muted-foreground">
-          {item.lab_name || DEFAULT_LAB}
         </div>
       </div>
 
@@ -284,20 +326,49 @@ function CampaignCard({
               <span className="text-muted-foreground"> / {money(goal)}</span>
             </span>
             <span className="text-xs text-muted-foreground">
-              {totals.backers ?? 0} backer{(totals.backers ?? 0) === 1 ? "" : "s"}
+              {totals.backer_count ?? 0} backer{(totals.backer_count ?? 0) === 1 ? "" : "s"}
             </span>
           </div>
         </div>
 
+        {/* Backer strip */}
+        {backers.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center -space-x-1.5">
+              {backers.slice(0, 8).map((b, i) => (
+                <span
+                  key={i}
+                  title={`${money(b.amount_cents)} · ${new Date(b.created_at).toLocaleDateString()}`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-card bg-secondary text-[10px] font-medium text-foreground"
+                >
+                  {b.initial}
+                </span>
+              ))}
+              {backers.length > 8 && (
+                <span className="flex h-6 items-center justify-center rounded-full border border-card bg-secondary px-2 text-[10px] text-muted-foreground">
+                  +{(totals.backer_count ?? backers.length) - 8}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Tier ladder OR results */}
-        {isPublished && item.results ? (
-          <ResultsPanel results={item.results} />
+        {isPublished && item.findings ? (
+          <ResultsPanel findings={item.findings} coa_url={item.coa_url} lab={lab} />
         ) : (
-          <TierLadder raised={raised} state={state} />
+          <TierLadder tiers={tiers} raised={raised} state={state} />
+        )}
+
+        {/* Finnrick US-only note */}
+        {usOnly && (
+          <p className="mt-3 rounded-md border border-[color:var(--badge-warn-fg)]/20 bg-[color:var(--badge-warn-bg)]/50 px-3 py-2 text-[11px] leading-relaxed text-[color:var(--badge-warn-fg)]">
+            Finnrick tests US‑resident samples only; the sealed vial must ship from within the US.
+          </p>
         )}
 
         {/* Trust note */}
-        <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
           The batch is sent as sealed, unopened vials to prevent contamination before analysis.
         </p>
 
@@ -348,15 +419,21 @@ function CampaignCard({
 // Tier ladder
 // -------------------------------------------------------------------
 
-function TierLadder({ raised, state }: { raised: number; state: string }) {
+function TierLadder({ tiers, raised, state }: { tiers: Tier[]; raised: number; state: string }) {
   return (
     <div className="mt-5 rounded-lg border border-border bg-background/40 p-3">
       <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
         Unlock ladder
       </div>
       <ul className="mt-2 space-y-1.5">
-        {TIERS.map((t) => {
-          const unlocked = raised >= t.threshold_cents || state === "published" || state === "testing";
+        {tiers.map((t) => {
+          const unlocked =
+            t.free ||
+            raised >= t.threshold_cents ||
+            state === "published" ||
+            state === "testing" ||
+            state === "procuring" ||
+            state === "funded";
           return (
             <li key={t.key} className="flex items-center gap-2.5">
               <span
@@ -374,7 +451,7 @@ function TierLadder({ raised, state }: { raised: number; state: string }) {
                   {t.name}
                 </span>
                 <span className={`font-mono tabular-nums ${unlocked ? "text-foreground" : "text-muted-foreground"}`}>
-                  {money(t.threshold_cents)}
+                  {t.free ? "$0 covered by lab" : money(t.threshold_cents)}
                 </span>
               </div>
             </li>
@@ -389,12 +466,20 @@ function TierLadder({ raised, state }: { raised: number; state: string }) {
 // Results panel (when published)
 // -------------------------------------------------------------------
 
-function ResultsPanel({ results }: { results: any }) {
+function ResultsPanel({
+  findings,
+  coa_url,
+  lab,
+}: {
+  findings: any;
+  coa_url?: string | null;
+  lab: string;
+}) {
   const rows: Array<[string, string]> = [
-    ["Purity", results.purity_pct ? `${results.purity_pct}%` : "—"],
-    ["Endotoxin", results.endotoxin_eu_per_vial ?? "—"],
-    ["Heavy metals", results.heavy_metals_pass ? "Pass" : "Fail"],
-    ["Sterility", results.sterility_pass ? "Pass" : "Fail"],
+    ["Purity", findings.purity_pct ? `${findings.purity_pct}%` : "—"],
+    ["Endotoxin", findings.endotoxin_eu_per_vial ?? "—"],
+    ["Heavy metals", findings.heavy_metals_pass === undefined ? "—" : findings.heavy_metals_pass ? "Pass" : "Fail"],
+    ["Sterility", findings.sterility_pass === undefined ? "—" : findings.sterility_pass ? "Pass" : "Fail"],
   ];
   return (
     <div className="mt-5 rounded-lg border border-border bg-background/40 p-3">
@@ -407,14 +492,14 @@ function ResultsPanel({ results }: { results: any }) {
           </div>
         ))}
       </dl>
-      {results.coa_url && (
+      {coa_url && (
         <a
-          href={results.coa_url}
+          href={coa_url}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-3 inline-block text-xs underline"
         >
-          Verifiable COA →
+          {lab === "finnrick" ? "Vendor ranking entry →" : "Verifiable COA →"}
         </a>
       )}
     </div>
@@ -432,9 +517,11 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
     queryFn: () => getItem({ data: { id: itemId } }),
   });
   const item = detail.data?.item as any;
+  const usOnly = !!item?.us_only;
 
-  const [amount, setAmount] = useState(2500);
+  const [amount, setAmount] = useState<number>(DEFAULT_PLEDGE);
   const [customFocused, setCustomFocused] = useState(false);
+  const [usAck, setUsAck] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
@@ -457,6 +544,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
           amount_cents: amount,
           return_url: `${window.location.origin}/board/${itemId}?pledged=1`,
           environment: getStripeEnvironment(),
+          us_shipping_ack: usOnly ? usAck : undefined,
         },
       });
       if ("error" in res) throw new Error(res.error);
@@ -468,6 +556,8 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
     },
     onError: (e: any) => setError(e.message ?? "Could not start pledge"),
   });
+
+  const canSubmit = amount >= 500 && (!usOnly || usAck);
 
   return (
     <div
@@ -511,23 +601,37 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
               <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
                 Pledge amount
               </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                $5 joins the pool — many small backers fund one test.
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {PRESET_PLEDGES.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => {
-                      setAmount(v);
-                      setCustomFocused(false);
-                    }}
-                    className={`rounded-md border px-4 py-2 text-sm transition-colors ${
-                      amount === v && !customFocused
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-card text-foreground hover:border-foreground/40"
-                    }`}
-                  >
-                    {money(v)}
-                  </button>
-                ))}
+                {PRESET_PLEDGES.map((v) => {
+                  const selected = amount === v && !customFocused;
+                  const isDefault = v === DEFAULT_PLEDGE;
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => {
+                        setAmount(v);
+                        setCustomFocused(false);
+                      }}
+                      className={`relative rounded-md border px-4 py-2 text-sm transition-colors ${
+                        selected
+                          ? "border-foreground bg-foreground text-background"
+                          : isDefault
+                          ? "border-foreground/60 bg-card text-foreground hover:border-foreground"
+                          : "border-border bg-card text-foreground hover:border-foreground/40"
+                      }`}
+                    >
+                      {money(v)}
+                      {isDefault && !selected && (
+                        <span className="ml-1 text-[9px] tracking-[0.14em] uppercase text-muted-foreground">
+                          join pool
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
                 <div
                   className={`flex items-center gap-1 rounded-md border bg-card px-3 transition-colors ${
                     customFocused ? "border-foreground" : "border-border"
@@ -548,6 +652,21 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
               </div>
             </div>
 
+            {usOnly && (
+              <label className="mt-5 flex items-start gap-2 rounded-md border border-[color:var(--badge-warn-fg)]/20 bg-[color:var(--badge-warn-bg)]/40 px-3 py-2.5 text-[12px] leading-relaxed text-[color:var(--badge-warn-fg)]">
+                <input
+                  type="checkbox"
+                  checked={usAck}
+                  onChange={(e) => setUsAck(e.target.checked)}
+                  className="mt-0.5 accent-current"
+                />
+                <span>
+                  I understand this Finnrick campaign requires the sealed vial to ship from within
+                  the US.
+                </span>
+              </label>
+            )}
+
             {error && <div className="mt-4 text-sm text-destructive">{error}</div>}
 
             <button
@@ -558,7 +677,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
                 }
                 pledge.mutate();
               }}
-              disabled={pledge.isPending || amount < 500}
+              disabled={pledge.isPending || !canSubmit}
               className="mt-6 w-full rounded-md bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background transition-colors hover:bg-foreground/90 disabled:opacity-40"
             >
               {pledge.isPending
