@@ -26,12 +26,23 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
     sb.from("item_funding_totals").select("*"),
   ]);
   const itemRows = items.data ?? [];
-  // Fetch anonymized backer strip for each item in parallel via SECURITY DEFINER rpc.
+  // Fetch anonymized backer strip using admin client (bypasses RLS) — anonymized fields only.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const backersByItem: Record<string, Array<{ amount_cents: number; created_at: string; initial: string }>> = {};
   await Promise.all(
     itemRows.map(async (it: any) => {
-      const { data } = await (sb.rpc as any)("list_item_backers", { _item_id: it.id, _limit: 12 });
-      backersByItem[it.id] = (data as any) ?? [];
+      const { data } = await (supabaseAdmin as any)
+        .from("pledges")
+        .select("amount_cents, created_at, profiles:profiles!pledges_user_id_fkey(handle)")
+        .eq("item_id", it.id)
+        .in("status", ["authorized", "captured"])
+        .order("created_at", { ascending: false })
+        .limit(12);
+      backersByItem[it.id] = ((data as any[]) ?? []).map((r) => ({
+        amount_cents: r.amount_cents,
+        created_at: r.created_at,
+        initial: (r.profiles?.handle?.[0] ?? "?").toUpperCase(),
+      }));
     }),
   );
   return {
@@ -40,6 +51,7 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
     backers: backersByItem,
   };
 });
+
 
 export const getItem = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
