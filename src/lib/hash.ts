@@ -8,13 +8,13 @@ function toHex(buffer: ArrayBuffer): string {
 }
 
 export async function sha256Hex(input: ArrayBuffer | Uint8Array | string): Promise<string> {
-  let data: ArrayBuffer;
+  let data: Uint8Array;
   if (typeof input === "string") {
-    data = new TextEncoder().encode(input).buffer;
+    data = new TextEncoder().encode(input);
   } else if (input instanceof Uint8Array) {
-    data = input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
-  } else {
     data = input;
+  } else {
+    data = new Uint8Array(input);
   }
   const digest = await crypto.subtle.digest("SHA-256", data);
   return toHex(digest);
