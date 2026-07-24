@@ -145,6 +145,51 @@ export type Database = {
           },
         ]
       }
+      certificate_register: {
+        Row: {
+          batch_id: string | null
+          first_seen_at: string
+          id: string
+          issue_date: string | null
+          issuing_lab: string | null
+          last_seen_at: string
+          normalized_sha256: string | null
+          product_name: string | null
+          purity_percent: number | null
+          seen_count: number
+          sequence: string | null
+          sha256: string
+        }
+        Insert: {
+          batch_id?: string | null
+          first_seen_at?: string
+          id?: string
+          issue_date?: string | null
+          issuing_lab?: string | null
+          last_seen_at?: string
+          normalized_sha256?: string | null
+          product_name?: string | null
+          purity_percent?: number | null
+          seen_count?: number
+          sequence?: string | null
+          sha256: string
+        }
+        Update: {
+          batch_id?: string | null
+          first_seen_at?: string
+          id?: string
+          issue_date?: string | null
+          issuing_lab?: string | null
+          last_seen_at?: string
+          normalized_sha256?: string | null
+          product_name?: string | null
+          purity_percent?: number | null
+          seen_count?: number
+          sequence?: string | null
+          sha256?: string
+        }
+        Relationships: []
+      }
       community_fund: {
         Row: {
           id: boolean
