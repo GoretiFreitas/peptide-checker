@@ -32,7 +32,7 @@ export function SiteHeader() {
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-4 md:px-10">
         <Link to="/" onClick={() => setOpen(false)} className="font-serif text-lg tracking-tight text-foreground sm:text-xl">
-          PeptidesCheck<span className="text-muted-foreground">, by Descier Science.</span>
+          PeptidesCheck<span className="text-muted-foreground">.</span>
         </Link>
 
         <nav className="hidden items-center gap-6 text-[11px] font-medium tracking-[0.18em] uppercase md:flex">

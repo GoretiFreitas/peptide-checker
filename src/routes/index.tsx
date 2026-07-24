@@ -152,7 +152,7 @@ function Index() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-[1100px] px-6 py-16 md:px-10 md:py-24">
           <div className="text-[11px] font-medium tracking-[0.22em] uppercase text-muted-foreground">
-            PeptidesCheck, by Descier Science
+            {"\n"}
           </div>
           <h1 className="mt-4 font-serif text-5xl leading-[1.05] tracking-tight text-foreground md:text-6xl">
             PeptidesCheck.
