@@ -36,6 +36,7 @@ function NominatePage() {
   const [seller, setSeller] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [consent, setConsent] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -130,13 +131,26 @@ function NominatePage() {
               placeholder="Briefly: who's buying it, and what specifically would an independent test settle?"
             />
           </Field>
+          <label className="flex items-start gap-3 rounded-sm border border-border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              I consent to Descier Science storing the information above so administrators can review
+              this nomination. This is handled in line with the Lei Geral de Proteção de Dados (the
+              Brazilian data-protection law) and the General Data Protection Regulation (GDPR).
+            </span>
+          </label>
           {submit.isError && (
             <div className="text-sm text-destructive">
               {(submit.error as Error).message}
             </div>
           )}
           <button
-            disabled={submit.isPending || productName.trim().length < 2}
+            disabled={submit.isPending || productName.trim().length < 2 || !consent}
             className="rounded-sm bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background disabled:opacity-40"
           >
             {submit.isPending ? "…" : "Submit nomination"}

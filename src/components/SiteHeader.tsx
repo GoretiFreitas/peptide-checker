@@ -31,12 +31,13 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-4 md:px-10">
-        <Link to="/" onClick={() => setOpen(false)} className="font-serif text-xl tracking-tight text-foreground sm:text-2xl">
-          &nbsp;Knowledge Orchestration<span className="text-muted-foreground">.</span>
+        <Link to="/" onClick={() => setOpen(false)} className="font-serif text-lg tracking-tight text-foreground sm:text-xl">
+          PeptidesCheck<span className="text-muted-foreground">, by Descier Science.</span>
         </Link>
 
         <nav className="hidden items-center gap-6 text-[11px] font-medium tracking-[0.18em] uppercase md:flex">
           <Link to="/" className={linkClass} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
+          <Link to="/verify" search={{}} className={linkClass} activeProps={activeProps}>Verify</Link>
           <Link to="/board" className={linkClass} activeProps={activeProps}>Board</Link>
           <Link to="/support" search={{}} className={linkClass} activeProps={activeProps}>Support</Link>
           {email && (
@@ -68,6 +69,7 @@ export function SiteHeader() {
         <nav className="md:hidden border-t border-border bg-background">
           <div className="mx-auto flex max-w-[1400px] flex-col gap-1 px-6 py-4 text-[11px] font-medium tracking-[0.18em] uppercase">
             <Link to="/" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
+            <Link to="/verify" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Verify</Link>
             <Link to="/board" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Board</Link>
             <Link to="/support" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Support</Link>
             {email ? (
