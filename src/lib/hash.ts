@@ -8,15 +8,18 @@ function toHex(buffer: ArrayBuffer): string {
 }
 
 export async function sha256Hex(input: ArrayBuffer | Uint8Array | string): Promise<string> {
-  let data: Uint8Array;
+  let bytes: Uint8Array;
   if (typeof input === "string") {
-    data = new TextEncoder().encode(input);
+    bytes = new TextEncoder().encode(input);
   } else if (input instanceof Uint8Array) {
-    data = input;
+    bytes = input;
   } else {
-    data = new Uint8Array(input);
+    bytes = new Uint8Array(input);
   }
-  const digest = await crypto.subtle.digest("SHA-256", data);
+  // Copy into a fresh ArrayBuffer to satisfy strict BufferSource typing.
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", copy.buffer);
   return toHex(digest);
 }
 
