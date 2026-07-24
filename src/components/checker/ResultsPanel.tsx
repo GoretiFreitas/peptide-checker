@@ -1,15 +1,19 @@
-import { FileText, AlertCircle } from "lucide-react";
+import { FileText, AlertCircle, ShieldAlert, Link2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { AnalysisResult, ExtractedCertificate, FieldResults, Flag } from "@/lib/certificate-types";
 import { StatusBadge, VerdictBadge } from "./StatusBadge";
 
+interface RegisterInfo {
+  sha256: string;
+  status: "newly_registered" | "already_registered";
+}
 
 interface Props {
   state:
     | { kind: "idle" }
     | { kind: "loading" }
     | { kind: "error"; message: string }
-    | { kind: "ok"; result: AnalysisResult };
+    | { kind: "ok"; result: AnalysisResult; registerInfo?: RegisterInfo | null };
 }
 
 export function ResultsPanel({ state }: Props) {
@@ -22,7 +26,7 @@ export function ResultsPanel({ state }: Props) {
             Analysis results pending
           </div>
           <div className="max-w-md text-xs text-muted-foreground">
-            Input data and click check certificate to begin verification process.
+            Upload a certificate or paste raw text, then click Check certificate to begin.
           </div>
         </div>
       </PanelShell>
@@ -54,7 +58,7 @@ export function ResultsPanel({ state }: Props) {
     );
   }
 
-  return <Results result={state.result} />;
+  return <Results result={state.result} registerInfo={state.registerInfo} />;
 }
 
 function PanelShell({ children }: { children: React.ReactNode }) {
@@ -65,8 +69,32 @@ function PanelShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Results({ result }: { result: AnalysisResult }) {
+function summarize(result: AnalysisResult): string {
+  const { extracted, fieldResults, verdict } = result;
+  const name = extracted.productName && extracted.productName !== "not reported"
+    ? extracted.productName
+    : "This certificate";
+  const purity = extracted.purity.percent !== null ? `${extracted.purity.percent}% purity` : "no reported purity";
+  const missing: string[] = [];
+  if (fieldResults.sterility === "not tested") missing.push("sterility");
+  if (fieldResults.endotoxins === "not tested") missing.push("endotoxins");
+  const caveat = missing.length
+    ? ` The document does not report ${missing.join(" or ")} testing.`
+    : "";
+  return `${name} reports ${purity}. Verdict: ${verdict.toLowerCase()}.${caveat}`;
+}
+
+function Results({
+  result,
+  registerInfo,
+}: {
+  result: AnalysisResult;
+  registerInfo?: RegisterInfo | null;
+}) {
   const { extracted, fieldResults, flags, verdict } = result;
+  const missingSterile = fieldResults.sterility === "not tested";
+  const missingEndo = fieldResults.endotoxins === "not tested";
+  const missingCritical = missingSterile || missingEndo;
 
   return (
     <div className="space-y-8 rounded-md border border-border bg-card p-6 md:p-8">
@@ -78,6 +106,9 @@ function Results({ result }: { result: AnalysisResult }) {
           <div className="mt-2">
             <VerdictBadge verdict={verdict} />
           </div>
+          <p className="mt-3 max-w-[70ch] text-sm text-foreground">
+            {summarize(result)}
+          </p>
           {verdict === "Document review — consistent" && (
             <div className="mt-2 text-xs text-muted-foreground">
               Based on the document only, not an independent test.
@@ -86,6 +117,27 @@ function Results({ result }: { result: AnalysisResult }) {
         </div>
       </div>
 
+      {missingCritical && (
+        <div className="flex gap-3 rounded-md border border-[--badge-fail-fg]/40 bg-[--badge-fail-fg]/5 p-4">
+          <ShieldAlert className="h-5 w-5 shrink-0 text-[--badge-fail-fg]" strokeWidth={1.6} />
+          <div>
+            <div className="text-sm font-medium text-foreground">
+              Missing safety-critical testing.
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {missingSterile && missingEndo
+                ? "This certificate does not report sterility or bacterial endotoxin testing."
+                : missingSterile
+                  ? "This certificate does not report sterility testing."
+                  : "This certificate does not report bacterial endotoxin testing."}{" "}
+              For anything intended to be injected, missing sterility or endotoxin results is a red flag. Purity does not mean safety.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {registerInfo && <RegisterBox info={registerInfo} />}
+
       <FieldsList extracted={extracted} results={fieldResults} />
 
       <FlagsList flags={flags} />
@@ -93,6 +145,33 @@ function Results({ result }: { result: AnalysisResult }) {
       <DisclaimerBox />
 
       <HonestFraming productName={extracted.productName} />
+    </div>
+  );
+}
+
+function RegisterBox({ info }: { info: RegisterInfo }) {
+  const short = `${info.sha256.slice(0, 10)}…${info.sha256.slice(-6)}`;
+  const shareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/verify?hash=${info.sha256}`
+    : `/verify?hash=${info.sha256}`;
+  return (
+    <div className="rounded-md border border-border bg-background/60 p-4">
+      <div className="flex items-center gap-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+        <Link2 className="h-3.5 w-3.5" />
+        Authenticity Register
+      </div>
+      <div className="mt-2 text-sm text-foreground">
+        {info.status === "newly_registered"
+          ? "This certificate hash was recorded in the append-only register for the first time."
+          : "This exact certificate has been seen before. The register entry was updated."}
+      </div>
+      <div className="mt-2 font-mono text-xs text-muted-foreground">SHA-256: {short}</div>
+      <a
+        href={shareUrl}
+        className="mt-3 inline-flex items-center gap-1 text-xs text-foreground underline underline-offset-4 hover:no-underline"
+      >
+        Shareable verification link
+      </a>
     </div>
   );
 }
@@ -133,11 +212,11 @@ function FieldsList({
     extracted.purity.percent !== null
       ? `${extracted.purity.percent}%${
           extracted.purity.method && extracted.purity.method !== "not reported"
-            ? ` · ${extracted.purity.method}`
+            ? `, ${extracted.purity.method}`
             : ""
         }${
           extracted.purity.wavelength && extracted.purity.wavelength !== "not reported"
-            ? ` @ ${extracted.purity.wavelength}`
+            ? ` at ${extracted.purity.wavelength}`
             : ""
         }`
       : "not reported";
@@ -148,7 +227,7 @@ function FieldsList({
         Extracted fields
       </h2>
       <div>
-        <Row label="Product / peptide" value={extracted.productName} />
+        <Row label="Product or peptide" value={extracted.productName} />
         <Row label="Sequence" value={extracted.sequence} />
         <Row
           label="Identity"
@@ -184,7 +263,7 @@ function FieldsList({
           status={<StatusBadge status={results.endotoxins} />}
         />
         <Row
-          label="Sterility / microbial"
+          label="Sterility or microbial"
           value={extracted.sterility}
           status={<StatusBadge status={results.sterility} />}
         />
@@ -200,7 +279,7 @@ function FieldsList({
         />
         <Row label="Issuing laboratory" value={extracted.issuingLab} />
         <Row label="Issue date" value={extracted.issueDate} />
-        <Row label="Batch / lot" value={extracted.batchId} />
+        <Row label="Batch or lot" value={extracted.batchId} />
       </div>
       {extracted.rawNotes && (
         <details className="mt-4">
@@ -271,14 +350,13 @@ function DisclaimerBox() {
 }
 
 function HonestFraming({ productName }: { productName: string }) {
-  const q = productName && productName !== "not reported" ? `?product=${encodeURIComponent(productName)}` : "";
   return (
     <div className="space-y-3">
       <p className="text-xs leading-relaxed text-muted-foreground">
         A document check is weaker than an independent test. A certificate can be fabricated, or
         produced from a different batch than the one that actually shipped. The strongest check is
-        an independent test of a product bought anonymously — which is what the cooperative's
-        community testing board funds.
+        an independent laboratory test of a product bought anonymously, which is what the community
+        testing board funds.
       </p>
       <Link
         to="/board/nominate"
@@ -287,8 +365,6 @@ function HonestFraming({ productName }: { productName: string }) {
       >
         Nominate for independent testing
       </Link>
-      <span aria-hidden className="hidden">{q}</span>
     </div>
   );
 }
-
