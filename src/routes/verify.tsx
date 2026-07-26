@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { lookupRegister } from "@/lib/register.functions";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
+
 
 export const Route = createFileRoute("/verify")({
   head: () => ({
@@ -111,7 +111,6 @@ function VerifyPage() {
           </Link>
         </div>
       </main>
-      <SiteFooter />
     </div>
   );
 }

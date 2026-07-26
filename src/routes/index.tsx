@@ -9,7 +9,7 @@ import { FileDropzone } from "@/components/checker/FileDropzone";
 import { RawTextInput } from "@/components/checker/RawTextInput";
 import { ResultsPanel } from "@/components/checker/ResultsPanel";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
+
 import type { AnalysisResult } from "@/lib/certificate-types";
 
 export const Route = createFileRoute("/")({
@@ -407,8 +407,6 @@ function Index() {
           </p>
         </div>
       </section>
-
-      <SiteFooter />
     </div>
   );
 }
