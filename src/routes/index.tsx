@@ -400,10 +400,7 @@ function Index() {
             Who runs this, and how it stays independent.
           </h2>
           <p className="mt-4 max-w-[70ch] text-sm leading-relaxed text-foreground md:text-base">
-            PeptidesCheck is run by Descier Science and is independent and community-supported. It is
-            deliberately separate from any commercial venture-services arm, because the moment a
-            verifier looks like the same owner grading paying clients, its credibility is gone. When
-            independent laboratory partners are added, they will be named here by their real name.
+            PeptidesCheck is run by Descier Science and is independent and community-supported.
           </p>
         </div>
       </section>
