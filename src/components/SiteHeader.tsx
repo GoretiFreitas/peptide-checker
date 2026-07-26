@@ -34,7 +34,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-4 md:px-10">
         <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2 font-serif text-lg tracking-tight text-foreground sm:text-xl">
           <img src={logoAsset.url} alt="PeptidesCheck" className="h-7 w-auto sm:h-8" />
-          PeptidesCheck<span className="text-muted-foreground">.</span>
+          PeptidesCheck.
         </Link>
 
         <nav className="hidden items-center gap-6 text-[11px] font-medium tracking-[0.18em] uppercase md:flex">
