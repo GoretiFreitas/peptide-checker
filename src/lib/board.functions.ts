@@ -88,6 +88,8 @@ export const nominateItem = createServerFn({ method: "POST" })
         seller: z.string().max(200).default(""),
         source_url: z.string().url().optional().or(z.literal("")),
         description: z.string().max(2000).optional(),
+        lab: z.enum(["janoshik", "finnrick"]),
+        test_battery: z.array(z.string()).default([]),
       })
       .parse(d),
   )
@@ -99,6 +101,8 @@ export const nominateItem = createServerFn({ method: "POST" })
         seller: data.seller,
         source_url: data.source_url || null,
         description: data.description || null,
+        lab: data.lab,
+        test_battery: data.test_battery,
         state: "nominated",
         nominated_by: context.userId,
       })
