@@ -40,7 +40,7 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-6 text-[11px] font-medium tracking-[0.18em] uppercase md:flex">
           <Link to="/" className={linkClass} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
           <Link to="/verify" search={{}} className={linkClass} activeProps={activeProps}>Verify</Link>
-          <Link to="/fund" className={linkClass} activeProps={activeProps}>Board</Link>
+          <Link to="/fund" className={linkClass} activeProps={activeProps}>Fund</Link>
           <Link to="/support" search={{}} className={linkClass} activeProps={activeProps}>Support</Link>
           {email && (
             <span className="flex items-center gap-1.5">
@@ -72,7 +72,7 @@ export function SiteHeader() {
           <div className="mx-auto flex max-w-[1400px] flex-col gap-1 px-6 py-4 text-[11px] font-medium tracking-[0.18em] uppercase">
             <Link to="/" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
             <Link to="/verify" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Verify</Link>
-            <Link to="/fund" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Board</Link>
+            <Link to="/fund" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Fund</Link>
             <Link to="/support" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Support</Link>
             {email ? (
               <button onClick={() => { setOpen(false); supabase.auth.signOut(); }} className={`${linkClass} py-2 text-left`}>Sign out</button>

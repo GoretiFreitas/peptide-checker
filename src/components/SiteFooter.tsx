@@ -10,7 +10,7 @@ export function SiteFooter() {
               PeptidesCheck<span className="text-muted-foreground">.</span>
             </div>
             <p className="mt-3 max-w-[32ch] text-xs leading-relaxed text-muted-foreground">
-              Independent and community-supported. Certificate review and authenticity, plus a community board that funds independent laboratory testing.
+              Independent and community-supported. Certificate review and authenticity, plus a community fund that funds independent laboratory testing.
             </p>
           </div>
 
@@ -31,7 +31,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link to="/fund" className="text-foreground hover:text-muted-foreground">
-                  Community testing board
+                  Community testing fund
                 </Link>
               </li>
               <li>

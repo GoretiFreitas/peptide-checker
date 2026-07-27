@@ -356,7 +356,7 @@ function HonestFraming({ productName }: { productName: string }) {
         A document check is weaker than an independent test. A certificate can be fabricated, or
         produced from a different batch than the one that actually shipped. The strongest check is
         an independent laboratory test of a product bought anonymously, which is what the community
-        testing board funds.
+        testing fund funds.
       </p>
       <Link
         to="/fund/nominate"

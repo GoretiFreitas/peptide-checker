@@ -86,7 +86,7 @@ function AdminPage() {
             This area is restricted to cooperative administrators.
           </p>
           <Link to="/fund" className="mt-6 inline-block text-sm underline">
-            ← Back to board
+            ← Back to fund
           </Link>
         </main>
       </div>
@@ -104,7 +104,7 @@ function AdminPage() {
           Cooperative admin
         </div>
         <h1 className="mt-2 font-serif text-4xl tracking-tight text-foreground">
-          Testing board — admin.
+          Testing fund — admin.
         </h1>
 
         <TaxCodesButton />

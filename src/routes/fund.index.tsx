@@ -37,13 +37,13 @@ const DEFAULT_PLEDGE = 500;
 export const Route = createFileRoute("/fund/")({
   head: () => ({
     meta: [
-      { title: "Crowdfunded Peptide Testing Board — Hyperlatitude" },
+      { title: "Crowdfunded Peptide Testing Fund — Hyperlatitude" },
       {
         name: "description",
         content:
           "Pool funds, test the batch once, share the intel. Back independent lab tests of specific peptide batches — only charged if the goal is met.",
       },
-      { property: "og:title", content: "Crowdfunded Peptide Testing Board" },
+      { property: "og:title", content: "Crowdfunded Peptide Testing Fund" },
       {
         property: "og:description",
         content:

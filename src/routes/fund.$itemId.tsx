@@ -22,11 +22,11 @@ export const Route = createFileRoute("/fund/$itemId")({
   head: ({ params, loaderData }) => {
     const name = loaderData?.productName;
     const title = name
-      ? `${name} — Peptide Testing Board`
-      : "Peptide Testing Board — Certificate Checker";
+      ? `${name} — Peptide Testing Fund`
+      : "Peptide Testing Fund — Certificate Checker";
     const desc = name
       ? `Back the independent test of ${name}. Pledge to fund; only charged if the goal is met.`
-      : "Back an independent test of a peptide product on the community testing board.";
+      : "Back an independent test of a peptide product on the community testing fund.";
     return {
       meta: [
         { title },
@@ -120,7 +120,7 @@ function ItemDetail() {
         <div className="mx-auto max-w-[900px] px-6 py-12">
           <div className="text-sm text-muted-foreground">Item not found.</div>
           <Link to="/fund" className="mt-4 inline-block text-sm underline">
-            ← Back to board
+            ← Back to fund
           </Link>
         </div>
       </div>
@@ -140,7 +140,7 @@ function ItemDetail() {
           to="/fund"
           className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground"
         >
-          ← Board
+          ← Fund
         </Link>
 
         <div className="mt-6 flex items-center gap-3">

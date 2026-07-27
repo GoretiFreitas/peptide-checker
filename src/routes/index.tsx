@@ -376,7 +376,7 @@ function Index() {
                 to="/fund"
                 className="rounded-sm bg-foreground px-5 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-background hover:bg-foreground/90"
               >
-                Community testing board
+                Community testing fund
               </Link>
               <Link
                 to="/support"

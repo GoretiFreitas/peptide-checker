@@ -110,7 +110,7 @@ function NominatePage() {
           to="/fund"
           className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground"
         >
-          ← Board
+          ← Fund
         </Link>
         <h1 className="mt-4 font-serif text-4xl tracking-tight text-foreground">
           Nominate a product.
