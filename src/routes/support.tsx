@@ -275,7 +275,7 @@ function SupportPage() {
         )}
 
         <p className="mt-16 text-xs text-muted-foreground">
-          <Link to="/board" className="underline">Or fund a specific product test on the board →</Link>
+          <Link to="/fund" className="underline">Or fund a specific product test on the board →</Link>
         </p>
       </main>
     </div>

@@ -7,8 +7,8 @@ Certificate Checker analyzes peptide Certificates of Analysis (CoAs). It extract
 ## Pages
 
 - [Certificate Checker](/): Upload or paste a CoA and get a field-by-field analysis.
-- [Testing Board](/board): Community-funded independent tests of peptide products.
-- [Nominate a product](/board/nominate): Suggest a peptide product for independent testing.
+- [Testing Board](/fund): Community-funded independent tests of peptide products.
+- [Nominate a product](/fund/nominate): Suggest a peptide product for independent testing.
 - [Support](/support): Fund the cooperative through membership, donations, or registry access.
 
 ## Optional

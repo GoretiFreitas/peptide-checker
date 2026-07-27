@@ -30,7 +30,7 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/board" className="text-foreground hover:text-muted-foreground">
+                <Link to="/fund" className="text-foreground hover:text-muted-foreground">
                   Community testing board
                 </Link>
               </li>

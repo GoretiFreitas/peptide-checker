@@ -34,7 +34,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: next || "/board", replace: true });
+      if (data.user) navigate({ to: next || "/fund", replace: true });
     });
   }, [navigate, next]);
 
@@ -56,7 +56,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: next || "/board", replace: true });
+      navigate({ to: next || "/fund", replace: true });
     } catch (e: any) {
       setError(e.message ?? "Sign-in failed");
     } finally {
@@ -91,7 +91,7 @@ function AuthPage() {
       redirect_uri: window.location.origin + "/auth" + (next ? `?next=${encodeURIComponent(next)}` : ""),
     });
     if (result.error) setError(String(result.error));
-    if (!result.redirected && !result.error) navigate({ to: next || "/board", replace: true });
+    if (!result.redirected && !result.error) navigate({ to: next || "/fund", replace: true });
   };
 
   return (

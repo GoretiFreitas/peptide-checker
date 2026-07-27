@@ -10,7 +10,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/board/$itemId")({
+export const Route = createFileRoute("/fund/$itemId")({
   loader: async ({ params }) => {
     try {
       const res = await getItem({ data: { id: params.itemId } });
@@ -34,9 +34,9 @@ export const Route = createFileRoute("/board/$itemId")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "product" },
-        { property: "og:url", content: `/board/${params.itemId}` },
+        { property: "og:url", content: `/fund/${params.itemId}` },
       ],
-      links: [{ rel: "canonical", href: `/board/${params.itemId}` }],
+      links: [{ rel: "canonical", href: `/fund/${params.itemId}` }],
     };
   },
   component: ItemDetail,
@@ -83,7 +83,7 @@ function ItemDetail() {
         data: {
           item_id: itemId,
           amount_cents: amount,
-          return_url: `${window.location.origin}/board/${itemId}?pledged=1`,
+          return_url: `${window.location.origin}/fund/${itemId}?pledged=1`,
           environment: getStripeEnvironment(),
         },
       });
@@ -119,7 +119,7 @@ function ItemDetail() {
         <SiteHeader />
         <div className="mx-auto max-w-[900px] px-6 py-12">
           <div className="text-sm text-muted-foreground">Item not found.</div>
-          <Link to="/board" className="mt-4 inline-block text-sm underline">
+          <Link to="/fund" className="mt-4 inline-block text-sm underline">
             ← Back to board
           </Link>
         </div>
@@ -137,7 +137,7 @@ function ItemDetail() {
       <SiteHeader />
       <main className="mx-auto max-w-[900px] px-6 py-10 md:px-10">
         <Link
-          to="/board"
+          to="/fund"
           className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground"
         >
           ← Board
@@ -262,7 +262,7 @@ function ItemDetail() {
                     if (!signedIn) {
                       navigate({
                         to: "/auth",
-                        search: { next: `/board/${itemId}` },
+                        search: { next: `/fund/${itemId}` },
                       });
                       return;
                     }

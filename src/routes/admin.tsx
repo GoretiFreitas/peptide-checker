@@ -85,7 +85,7 @@ function AdminPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             This area is restricted to cooperative administrators.
           </p>
-          <Link to="/board" className="mt-6 inline-block text-sm underline">
+          <Link to="/fund" className="mt-6 inline-block text-sm underline">
             ← Back to board
           </Link>
         </main>
@@ -204,7 +204,7 @@ function AdminRow({
           </div>
         </div>
         <Link
-          to="/board/$itemId"
+          to="/fund/$itemId"
           params={{ itemId: item.id }}
           className="text-[11px] tracking-[0.14em] uppercase underline"
         >

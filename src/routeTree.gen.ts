@@ -16,10 +16,10 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as BoardIndexRouteImport } from './routes/board.index'
+import { Route as FundIndexRouteImport } from './routes/fund.index'
 import { Route as RegistryItemIdRouteImport } from './routes/registry.$itemId'
-import { Route as BoardNominateRouteImport } from './routes/board.nominate'
-import { Route as BoardItemIdRouteImport } from './routes/board.$itemId'
+import { Route as FundNominateRouteImport } from './routes/fund.nominate'
+import { Route as FundItemIdRouteImport } from './routes/fund.$itemId'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -61,9 +61,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BoardIndexRoute = BoardIndexRouteImport.update({
-  id: '/board/',
-  path: '/board/',
+const FundIndexRoute = FundIndexRouteImport.update({
+  id: '/fund/',
+  path: '/fund/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegistryItemIdRoute = RegistryItemIdRouteImport.update({
@@ -71,14 +71,14 @@ const RegistryItemIdRoute = RegistryItemIdRouteImport.update({
   path: '/registry/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BoardNominateRoute = BoardNominateRouteImport.update({
-  id: '/board/nominate',
-  path: '/board/nominate',
+const FundNominateRoute = FundNominateRouteImport.update({
+  id: '/fund/nominate',
+  path: '/fund/nominate',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BoardItemIdRoute = BoardItemIdRouteImport.update({
-  id: '/board/$itemId',
-  path: '/board/$itemId',
+const FundItemIdRoute = FundItemIdRouteImport.update({
+  id: '/fund/$itemId',
+  path: '/fund/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -121,10 +121,10 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/board/$itemId': typeof BoardItemIdRoute
-  '/board/nominate': typeof BoardNominateRoute
+  '/fund/$itemId': typeof FundItemIdRoute
+  '/fund/nominate': typeof FundNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
-  '/board/': typeof BoardIndexRoute
+  '/fund/': typeof FundIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -139,10 +139,10 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/board/$itemId': typeof BoardItemIdRoute
-  '/board/nominate': typeof BoardNominateRoute
+  '/fund/$itemId': typeof FundItemIdRoute
+  '/fund/nominate': typeof FundNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
-  '/board': typeof BoardIndexRoute
+  '/fund': typeof FundIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -158,10 +158,10 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/board/$itemId': typeof BoardItemIdRoute
-  '/board/nominate': typeof BoardNominateRoute
+  '/fund/$itemId': typeof FundItemIdRoute
+  '/fund/nominate': typeof FundNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
-  '/board/': typeof BoardIndexRoute
+  '/fund/': typeof FundIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -178,10 +178,10 @@ export interface FileRouteTypes {
     | '/verify'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/board/$itemId'
-    | '/board/nominate'
+    | '/fund/$itemId'
+    | '/fund/nominate'
     | '/registry/$itemId'
-    | '/board/'
+    | '/fund/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/payments/webhook'
@@ -196,10 +196,10 @@ export interface FileRouteTypes {
     | '/verify'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/board/$itemId'
-    | '/board/nominate'
+    | '/fund/$itemId'
+    | '/fund/nominate'
     | '/registry/$itemId'
-    | '/board'
+    | '/fund'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/payments/webhook'
@@ -214,10 +214,10 @@ export interface FileRouteTypes {
     | '/verify'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/board/$itemId'
-    | '/board/nominate'
+    | '/fund/$itemId'
+    | '/fund/nominate'
     | '/registry/$itemId'
-    | '/board/'
+    | '/fund/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/payments/webhook'
@@ -233,10 +233,10 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  BoardItemIdRoute: typeof BoardItemIdRoute
-  BoardNominateRoute: typeof BoardNominateRoute
+  FundItemIdRoute: typeof FundItemIdRoute
+  FundNominateRoute: typeof FundNominateRoute
   RegistryItemIdRoute: typeof RegistryItemIdRoute
-  BoardIndexRoute: typeof BoardIndexRoute
+  FundIndexRoute: typeof FundIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -293,11 +293,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/board/': {
-      id: '/board/'
-      path: '/board'
-      fullPath: '/board/'
-      preLoaderRoute: typeof BoardIndexRouteImport
+    '/fund/': {
+      id: '/fund/'
+      path: '/fund'
+      fullPath: '/fund/'
+      preLoaderRoute: typeof FundIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/registry/$itemId': {
@@ -307,18 +307,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegistryItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/board/nominate': {
-      id: '/board/nominate'
-      path: '/board/nominate'
-      fullPath: '/board/nominate'
-      preLoaderRoute: typeof BoardNominateRouteImport
+    '/fund/nominate': {
+      id: '/fund/nominate'
+      path: '/fund/nominate'
+      fullPath: '/fund/nominate'
+      preLoaderRoute: typeof FundNominateRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/board/$itemId': {
-      id: '/board/$itemId'
-      path: '/board/$itemId'
-      fullPath: '/board/$itemId'
-      preLoaderRoute: typeof BoardItemIdRouteImport
+    '/fund/$itemId': {
+      id: '/fund/$itemId'
+      path: '/fund/$itemId'
+      fullPath: '/fund/$itemId'
+      preLoaderRoute: typeof FundItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -370,10 +370,10 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  BoardItemIdRoute: BoardItemIdRoute,
-  BoardNominateRoute: BoardNominateRoute,
+  FundItemIdRoute: FundItemIdRoute,
+  FundNominateRoute: FundNominateRoute,
   RegistryItemIdRoute: RegistryItemIdRoute,
-  BoardIndexRoute: BoardIndexRoute,
+  FundIndexRoute: FundIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
