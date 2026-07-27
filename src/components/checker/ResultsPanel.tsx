@@ -359,7 +359,7 @@ function HonestFraming({ productName }: { productName: string }) {
         testing board funds.
       </p>
       <Link
-        to="/board/nominate"
+        to="/fund/nominate"
         search={{ product: productName && productName !== "not reported" ? productName : undefined }}
         className="inline-flex items-center rounded-sm bg-foreground px-4 py-2 text-[11px] font-medium tracking-[0.22em] uppercase text-background hover:bg-foreground/90"
       >

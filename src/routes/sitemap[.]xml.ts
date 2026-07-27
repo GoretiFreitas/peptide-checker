@@ -33,7 +33,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             .from("board_items")
             .select("id, state, updated_at");
           for (const it of items ?? []) {
-            entries.push({ path: `/board/${it.id}`, changefreq: "weekly", priority: "0.6" });
+            entries.push({ path: `/fund/${it.id}`, changefreq: "weekly", priority: "0.6" });
             if (it.state === "published") {
               entries.push({ path: `/registry/${it.id}`, changefreq: "monthly", priority: "0.7" });
             }
