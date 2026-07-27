@@ -29,6 +29,22 @@ export const Route = createFileRoute("/board/nominate")({
   component: NominatePage,
 });
 
+type Lab = "janoshik" | "finnrick";
+
+const TEST_OPTIONS: Record<Lab, { key: string; label: string }[]> = {
+  janoshik: [
+    { key: "purity", label: "Purity + quantity" },
+    { key: "endotoxin", label: "Endotoxin (LAL)" },
+    { key: "heavy_metals", label: "Heavy metals (As, Cd, Pb, Hg)" },
+    { key: "sterility", label: "Sterility (TAMC + TYMC)" },
+  ],
+  finnrick: [
+    { key: "purity", label: "Purity + safety test" },
+    { key: "endotoxin", label: "Endotoxin analysis" },
+    { key: "heavy_metals", label: "Heavy metals analysis" },
+  ],
+};
+
 function NominatePage() {
   const { product } = Route.useSearch();
   const navigate = useNavigate();
@@ -36,6 +52,8 @@ function NominatePage() {
   const [seller, setSeller] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [lab, setLab] = useState<Lab>("janoshik");
+  const [tests, setTests] = useState<string[]>(["purity"]);
   const [consent, setConsent] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -53,6 +71,17 @@ function NominatePage() {
     });
   }, [navigate, product]);
 
+  const toggleTest = (key: string) => {
+    setTests((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  };
+
+  const changeLab = (next: Lab) => {
+    setLab(next);
+    setTests((prev) => prev.filter((k) => TEST_OPTIONS[next].some((t) => t.key === k)));
+  };
+
   const submit = useMutation({
     mutationFn: async () => {
       return await nominateItem({
@@ -61,6 +90,8 @@ function NominatePage() {
           seller: seller.trim(),
           source_url: sourceUrl.trim() || undefined,
           description: description.trim() || undefined,
+          lab,
+          test_battery: tests,
         },
       });
     },
@@ -131,6 +162,61 @@ function NominatePage() {
               placeholder="Briefly: who's buying it, and what specifically would an independent test settle?"
             />
           </Field>
+
+          <div>
+            <label className="mb-2 block text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+              Preferred lab
+            </label>
+            <div className="flex flex-col gap-3 rounded-sm border border-border bg-card p-3 sm:flex-row sm:gap-6">
+              <LabOption
+                id="lab-janoshik"
+                value="janoshik"
+                label="Janoshik International"
+                note="Prague · ships worldwide"
+                checked={lab === "janoshik"}
+                onChange={() => changeLab("janoshik")}
+              />
+              <LabOption
+                id="lab-finnrick"
+                value="finnrick"
+                label="Finnrick"
+                note="US only"
+                checked={lab === "finnrick"}
+                onChange={() => changeLab("finnrick")}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
+              Tests to include
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {TEST_OPTIONS[lab].map((t) => (
+                <label
+                  key={t.key}
+                  className="flex items-center gap-3 rounded-sm border border-border bg-card p-3 text-sm text-foreground hover:border-foreground/40"
+                >
+                  <input
+                    type="checkbox"
+                    checked={tests.includes(t.key)}
+                    onChange={() => toggleTest(t.key)}
+                    className="h-4 w-4"
+                  />
+                  {t.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-sm border border-border bg-card p-3 text-sm leading-relaxed text-muted-foreground">
+            A small initial pledge — even{" "}
+            <span className="font-medium text-foreground">$5 USD</span> — from the person
+            nominating the batch helps set the example and signals genuine interest to other
+            backers. It is entirely optional, but campaigns that start with a first backer tend to
+            fund faster.
+          </div>
+
           <label className="flex items-start gap-3 rounded-sm border border-border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
             <input
               type="checkbox"
@@ -140,8 +226,7 @@ function NominatePage() {
             />
             <span>
               I consent to Descier Science storing the information above so administrators can review
-              this nomination. This is handled in line with the Lei Geral de Proteção de Dados (the
-              Brazilian data-protection law) and the General Data Protection Regulation (GDPR).
+              this nomination. Data is handled in line with Data Protection Laws ( LGPD and GDPR).
             </span>
           </label>
           {submit.isError && (
@@ -150,7 +235,7 @@ function NominatePage() {
             </div>
           )}
           <button
-            disabled={submit.isPending || productName.trim().length < 2 || !consent}
+            disabled={submit.isPending || productName.trim().length < 2 || !consent || tests.length === 0}
             className="rounded-sm bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background disabled:opacity-40"
           >
             {submit.isPending ? "…" : "Submit nomination"}
@@ -171,5 +256,39 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </label>
       {children}
     </div>
+  );
+}
+
+function LabOption({
+  id,
+  value,
+  label,
+  note,
+  checked,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  label: string;
+  note: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+      <input
+        id={id}
+        type="radio"
+        name="lab"
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        className="mt-1 h-4 w-4"
+      />
+      <div className="text-sm leading-snug">
+        <div className="font-medium text-foreground">{label}</div>
+        <div className="text-xs text-muted-foreground">{note}</div>
+      </div>
+    </label>
   );
 }
