@@ -356,10 +356,10 @@ function HonestFraming({ productName }: { productName: string }) {
         A document check is weaker than an independent test. A certificate can be fabricated, or
         produced from a different batch than the one that actually shipped. The strongest check is
         an independent laboratory test of a product bought anonymously, which is what the community
-        testing board funds.
+        testing fund funds.
       </p>
       <Link
-        to="/board/nominate"
+        to="/fund/nominate"
         search={{ product: productName && productName !== "not reported" ? productName : undefined }}
         className="inline-flex items-center rounded-sm bg-foreground px-4 py-2 text-[11px] font-medium tracking-[0.22em] uppercase text-background hover:bg-foreground/90"
       >

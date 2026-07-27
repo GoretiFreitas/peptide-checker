@@ -5,7 +5,7 @@ import { nominateItem } from "@/lib/board.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 
-export const Route = createFileRoute("/board/nominate")({
+export const Route = createFileRoute("/fund/nominate")({
   head: () => ({
     meta: [
       { title: "Nominate a product — Certificate Checker" },
@@ -19,9 +19,9 @@ export const Route = createFileRoute("/board/nominate")({
         content: "Suggest a peptide product for an independent, community-funded test.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/board/nominate" },
+      { property: "og:url", content: "/fund/nominate" },
     ],
-    links: [{ rel: "canonical", href: "/board/nominate" }],
+    links: [{ rel: "canonical", href: "/fund/nominate" }],
   }),
   validateSearch: (s: Record<string, unknown>) => ({
     product: typeof s.product === "string" ? s.product : undefined,
@@ -62,7 +62,7 @@ function NominatePage() {
       if (!data.user) {
         navigate({
           to: "/auth",
-          search: { next: `/board/nominate${product ? `?product=${encodeURIComponent(product)}` : ""}` },
+          search: { next: `/fund/nominate${product ? `?product=${encodeURIComponent(product)}` : ""}` },
           replace: true,
         });
       } else {
@@ -96,7 +96,7 @@ function NominatePage() {
       });
     },
     onSuccess: (row: any) => {
-      navigate({ to: "/board/$itemId", params: { itemId: row.id } });
+      navigate({ to: "/fund/$itemId", params: { itemId: row.id } });
     },
   });
 
@@ -107,10 +107,10 @@ function NominatePage() {
       <SiteHeader />
       <main className="mx-auto max-w-[720px] px-6 py-12 md:px-10">
         <Link
-          to="/board"
+          to="/fund"
           className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground"
         >
-          ← Board
+          ← Fund
         </Link>
         <h1 className="mt-4 font-serif text-4xl tracking-tight text-foreground">
           Nominate a product.

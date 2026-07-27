@@ -34,25 +34,25 @@ const DEFAULT_PLEDGE = 500;
 
 // -------------------------------------------------------------------
 
-export const Route = createFileRoute("/board/")({
+export const Route = createFileRoute("/fund/")({
   head: () => ({
     meta: [
-      { title: "Crowdfunded Peptide Testing Board — Hyperlatitude" },
+      { title: "Crowdfunded Peptide Testing Fund — Hyperlatitude" },
       {
         name: "description",
         content:
           "Pool funds, test the batch once, share the intel. Back independent lab tests of specific peptide batches — only charged if the goal is met.",
       },
-      { property: "og:title", content: "Crowdfunded Peptide Testing Board" },
+      { property: "og:title", content: "Crowdfunded Peptide Testing Fund" },
       {
         property: "og:description",
         content:
           "Pool funds, test the batch once, share the intel — so nobody has to gamble on an untested vial.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/board" },
+      { property: "og:url", content: "/fund" },
     ],
-    links: [{ rel: "canonical", href: "/board" }],
+    links: [{ rel: "canonical", href: "/fund" }],
   }),
   component: BoardIndex,
 });
@@ -128,7 +128,7 @@ function BoardIndex() {
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
-              to="/board/nominate"
+              to="/fund/nominate"
               className="inline-flex items-center justify-center rounded-md bg-foreground px-5 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background shadow-sm transition-colors hover:bg-foreground/90"
             >
               Nominate a batch
@@ -300,7 +300,7 @@ function CampaignCard({
 
       <div className="flex flex-1 flex-col p-5">
         <Link
-          to="/board/$itemId"
+          to="/fund/$itemId"
           params={{ itemId: item.id }}
           className="font-serif text-xl leading-tight tracking-tight text-foreground hover:underline"
         >
@@ -383,7 +383,7 @@ function CampaignCard({
             </button>
           ) : isTesting ? (
             <Link
-              to="/board/$itemId"
+              to="/fund/$itemId"
               params={{ itemId: item.id }}
               className="flex-1 rounded-md border border-border bg-card px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-foreground transition-colors hover:border-foreground/40"
             >
@@ -391,7 +391,7 @@ function CampaignCard({
             </Link>
           ) : isPublished ? (
             <Link
-              to="/board/$itemId"
+              to="/fund/$itemId"
               params={{ itemId: item.id }}
               className="flex-1 rounded-md bg-primary px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-primary-foreground transition-colors hover:bg-primary/90"
             >
@@ -541,7 +541,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
         data: {
           item_id: itemId,
           amount_cents: amount,
-          return_url: `${window.location.origin}/board/${itemId}?pledged=1`,
+          return_url: `${window.location.origin}/fund/${itemId}?pledged=1`,
           environment: getStripeEnvironment(),
           us_shipping_ack: usOnly ? usAck : undefined,
         },
@@ -671,7 +671,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
             <button
               onClick={() => {
                 if (!signedIn) {
-                  navigate({ to: "/auth", search: { next: `/board` } });
+                  navigate({ to: "/auth", search: { next: `/fund` } });
                   return;
                 }
                 pledge.mutate();

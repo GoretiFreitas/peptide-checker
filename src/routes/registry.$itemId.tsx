@@ -110,8 +110,8 @@ function RegistryPage() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="mx-auto max-w-[820px] px-6 py-12 md:px-10">
-        <Link to="/board" className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground">
-          ← Board
+        <Link to="/fund" className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground">
+          ← Fund
         </Link>
         {publicQ.isLoading && <div className="mt-6 text-sm text-muted-foreground">Loading…</div>}
         {item && (

@@ -16,8 +16,8 @@ export const Route = createFileRoute("/sitemap.xml")({
       GET: async () => {
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/board", changefreq: "daily", priority: "0.9" },
-          { path: "/board/nominate", changefreq: "monthly", priority: "0.6" },
+          { path: "/fund", changefreq: "daily", priority: "0.9" },
+          { path: "/fund/nominate", changefreq: "monthly", priority: "0.6" },
           { path: "/support", changefreq: "monthly", priority: "0.6" },
         ];
 
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             .from("board_items")
             .select("id, state, updated_at");
           for (const it of items ?? []) {
-            entries.push({ path: `/board/${it.id}`, changefreq: "weekly", priority: "0.6" });
+            entries.push({ path: `/fund/${it.id}`, changefreq: "weekly", priority: "0.6" });
             if (it.state === "published") {
               entries.push({ path: `/registry/${it.id}`, changefreq: "monthly", priority: "0.7" });
             }
