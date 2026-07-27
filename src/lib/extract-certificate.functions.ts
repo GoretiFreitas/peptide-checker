@@ -37,10 +37,10 @@ Return the fields as structured JSON matching the provided schema.
 - batchId: batch/lot number as written, else "not reported".
 - rawNotes: a very short verbatim quote from the document supporting the most important extracted values, one per line.`;
 
-type ContentBlock =
+type ContentPart =
   | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } }
-  | { type: "file"; file: { filename: string; file_data: string } };
+  | { type: "image"; image: string }
+  | { type: "file"; data: string; mediaType: string; filename?: string };
 
 const EMPTY: ExtractedCertificate = {
   productName: NR,
@@ -68,7 +68,7 @@ export const extractCertificate = createServerFn({ method: "POST" })
     const hasText = !!(data.text && data.text.trim().length > 0);
     if (!hasFile && !hasText) throw new Error("Provide a file or paste certificate text.");
 
-    const content: ContentBlock[] = [
+    const content: ContentPart[] = [
       {
         type: "text",
         text: hasFile
@@ -80,11 +80,13 @@ export const extractCertificate = createServerFn({ method: "POST" })
     if (hasFile) {
       const dataUrl = `data:${data.fileMime};base64,${data.fileBase64}`;
       if (data.fileMime!.startsWith("image/")) {
-        content.push({ type: "image_url", image_url: { url: dataUrl } });
+        content.push({ type: "image", image: dataUrl });
       } else {
         content.push({
           type: "file",
-          file: { filename: data.fileName || "certificate.pdf", file_data: dataUrl },
+          data: dataUrl,
+          mediaType: data.fileMime!,
+          filename: data.fileName || "certificate.pdf",
         });
       }
     }
@@ -96,11 +98,12 @@ export const extractCertificate = createServerFn({ method: "POST" })
       const { output } = await generateText({
         model,
         system: SYSTEM,
-        messages: [{ role: "user", content: content as never }],
+        messages: [{ role: "user", content }],
         output: Output.object({ schema: extractedCertificateSchema }),
       });
       return output;
     } catch (error) {
+
       if (NoObjectGeneratedError.isInstance(error)) {
         console.error("Structured extraction failed:", error.text);
         try {
