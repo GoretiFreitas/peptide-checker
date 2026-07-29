@@ -372,15 +372,25 @@ function CampaignCard({
         </p>
 
         {/* Action */}
-        <div className="mt-5 flex items-center gap-3">
+        <div className="mt-5 flex items-center gap-2">
           {canBack ? (
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex-1 rounded-md bg-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-background transition-colors hover:bg-foreground/90"
-            >
-              Back this test
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="shrink-0 rounded-md border border-foreground/20 bg-background px-3 py-2.5 text-[11px] font-medium tracking-[0.16em] uppercase text-foreground transition-colors hover:border-foreground/40 hover:bg-secondary"
+                aria-label="Quick pledge $5"
+              >
+                $5
+              </button>
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex-1 rounded-md bg-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-background transition-colors hover:bg-foreground/90"
+              >
+                Back this test
+              </button>
+            </>
           ) : isTesting ? (
             <Link
               to="/fund/$itemId"
@@ -403,6 +413,7 @@ function CampaignCard({
             </span>
           )}
         </div>
+
         {canBack && (
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
             You're charged only if the campaign reaches its goal. Funds cover independent lab
