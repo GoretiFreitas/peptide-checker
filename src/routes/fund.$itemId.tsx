@@ -201,15 +201,22 @@ function ItemDetail() {
           {item.product_name}
         </h1>
 
-        {justPledged && (
+        {confirming && !paidAmount && (
+          <div className="mt-6 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
+            Confirming your payment…
+          </div>
+        )}
+
+        {(paidAmount !== null || justPledged) && (
           <div className="mt-6 rounded-md border border-[color:var(--badge-pass-fg)]/25 bg-[color:var(--badge-pass-bg)] p-5">
             <div className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--badge-pass-fg)]">
-              Contribution received — membership active
+              Payment successful — membership active
             </div>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
-              Thank you. Your contribution funds independent lab testing, and because you backed
-              $5 or more you are now a member: full test reports and campaign progress are
-              unlocked for you. Membership is $5/month — backing a pool keeps it active.
+              Thank you{paidAmount ? ` — your ${money(paidAmount)} contribution was received` : ""}.
+              It funds independent lab testing, and because you backed $5 or more you are now a
+              member: full test reports and campaign progress are unlocked for you. Membership is
+              $5/month — backing a pool keeps it active.
             </p>
             <Link
               to="/support"
