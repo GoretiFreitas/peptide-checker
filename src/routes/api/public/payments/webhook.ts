@@ -113,22 +113,25 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 // ------- One-time purchase handling (donations, registry) -------
 
 async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stripeEnvKey: StripeEnv) {
-  // Pledge sessions live under board.functions and use `metadata.pledge_id` — keep that path.
+  // Fund contributions live under board.functions and use `metadata.pledge_id`.
   const pledgeId = session.metadata?.pledge_id;
   if (pledgeId) {
+    if (session.payment_status === "unpaid") return;
     const admin = await getAdmin();
     const paymentIntentId =
       typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
     await admin
       .from("pledges")
       .update({
-        status: "authorized",
+        status: "paid",
         stripe_payment_intent_id: paymentIntentId ?? null,
+        backer_email: session.customer_details?.email ?? session.customer_email ?? null,
         environment: env,
       })
       .eq("id", pledgeId);
     return;
   }
+
 
   // Subscription checkouts: the subscription.created event will handle entitlement.
   if (session.mode !== "payment") return;
