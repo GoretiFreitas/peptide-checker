@@ -35,7 +35,7 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
         .from("pledges")
         .select("amount_cents, created_at, profiles:profiles!pledges_user_id_fkey(handle)")
         .eq("item_id", it.id)
-        .in("status", ["authorized", "captured"])
+        .in("status", ["paid", "authorized", "captured"])
         .order("created_at", { ascending: false })
         .limit(12);
       backersByItem[it.id] = ((data as any[]) ?? []).map((r) => ({
