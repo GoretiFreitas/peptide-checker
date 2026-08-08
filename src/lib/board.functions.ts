@@ -333,9 +333,10 @@ export const adminCloseCampaign = createServerFn({ method: "POST" })
       .select("id, product_name, state")
       .in("state", ["nominated", "funding"])
       .neq("id", item.id);
-    const { data: totals } = await sb.from("item_funding_totals").select("*");
+    const totals = await computeFundingTotals();
     const totalsById = new Map(
-      (totals ?? []).map((t: any) => [t.item_id, Number(t.pledged_cents ?? 0)]),
+      (totals ?? []).map((t) => [t.item_id, Number(t.pledged_cents ?? 0)]),
+
     );
     const target = (candidates ?? [])
       .slice()
