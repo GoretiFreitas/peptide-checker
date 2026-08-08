@@ -5,7 +5,8 @@ import {
   getBoard,
   isAdmin,
   adminSetItem,
-  adminSettlePledges,
+  adminCloseCampaign,
+  adminFundMetrics,
   adminPublishResult,
 } from "@/lib/board.functions";
 import { applyStripeTaxCodes } from "@/lib/payments.functions";
@@ -62,12 +63,18 @@ function AdminPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
   });
 
-  const settle = useMutation({
-    mutationFn: (d: { item_id: string; action: "capture" | "cancel" }) =>
-      adminSettlePledges({
-        data: { ...d, environment: getStripeEnvironment() },
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
+  const metrics = useQuery({
+    queryKey: ["fund-metrics"],
+    queryFn: () => adminFundMetrics(),
+    enabled: ready === "ok",
+  });
+
+  const close = useMutation({
+    mutationFn: (item_id: string) => adminCloseCampaign({ data: { item_id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["board"] });
+      qc.invalidateQueries({ queryKey: ["fund-metrics"] });
+    },
   });
 
   const publish = useMutation({
@@ -109,6 +116,8 @@ function AdminPage() {
 
         <TaxCodesButton />
 
+        <MetricsPanel data={metrics.data} loading={metrics.isLoading} />
+
 
         <div className="mt-8 space-y-6">
           {items.map((item: any) => (
@@ -117,9 +126,9 @@ function AdminPage() {
               item={item}
               totals={totalsById.get(item.id) as any}
               onSave={(patch) => setItem.mutate({ id: item.id, ...patch })}
-              onSettle={(action) => settle.mutate({ item_id: item.id, action })}
+              onClose={() => close.mutate(item.id)}
               onPublish={(payload) => publish.mutate({ item_id: item.id, ...payload })}
-              busy={setItem.isPending || settle.isPending || publish.isPending}
+              busy={setItem.isPending || close.isPending || publish.isPending}
             />
           ))}
         </div>
@@ -167,14 +176,14 @@ function AdminRow({
   item,
   totals,
   onSave,
-  onSettle,
+  onClose,
   onPublish,
   busy,
 }: {
   item: any;
   totals: any;
   onSave: (patch: any) => void;
-  onSettle: (action: "capture" | "cancel") => void;
+  onClose: () => void;
   onPublish: (payload: any) => void;
   busy: boolean;
 }) {
@@ -294,17 +303,17 @@ function AdminRow({
         </button>
         <button
           disabled={busy}
-          onClick={() => onSettle("capture")}
+          onClick={() => {
+            if (
+              window.confirm(
+                "Close this campaign? If the goal is met it is marked funded; otherwise every contribution rolls over to the most-backed active campaign. No refunds are issued.",
+              )
+            )
+              onClose();
+          }}
           className="rounded-sm border border-border px-4 py-2 text-[10px] font-medium tracking-[0.22em] uppercase text-foreground disabled:opacity-40"
         >
-          Capture pledges
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => onSettle("cancel")}
-          className="rounded-sm border border-border px-4 py-2 text-[10px] font-medium tracking-[0.22em] uppercase text-foreground disabled:opacity-40"
-        >
-          Cancel pledges
+          Close campaign
         </button>
         <button
           onClick={() => setPublishOpen((v) => !v)}
