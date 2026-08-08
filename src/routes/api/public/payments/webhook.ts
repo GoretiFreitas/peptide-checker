@@ -347,16 +347,10 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
   if (!pledgeId) return;
 
   switch (event.type) {
-    case "payment_intent.amount_capturable_updated":
-      await admin
-        .from("pledges")
-        .update({ status: "authorized", stripe_payment_intent_id: obj.id, environment: env })
-        .eq("id", pledgeId);
-      break;
     case "payment_intent.succeeded":
       await admin
         .from("pledges")
-        .update({ status: "captured", stripe_payment_intent_id: obj.id })
+        .update({ status: "paid", stripe_payment_intent_id: obj.id, environment: env })
         .eq("id", pledgeId);
       break;
     case "payment_intent.canceled":
@@ -367,6 +361,7 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
         .eq("id", pledgeId);
       break;
   }
+
 }
 
 // ------- Dispatcher -------
