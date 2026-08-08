@@ -23,7 +23,7 @@ export const Route = createFileRoute("/fund/nominate")({
     ],
     links: [{ rel: "canonical", href: "/fund/nominate" }],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { product?: string } => ({
     product: typeof s.product === "string" ? s.product : undefined,
   }),
   component: NominatePage,
