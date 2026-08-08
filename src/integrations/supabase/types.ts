@@ -211,10 +211,14 @@ export type Database = {
       pledges: {
         Row: {
           amount_cents: number
+          backer_email: string | null
           created_at: string
           environment: string
           id: string
           item_id: string
+          refunded_cents: number
+          rolled_over_at: string | null
+          rolled_over_from_item_id: string | null
           status: Database["public"]["Enums"]["pledge_status"]
           stripe_checkout_session_id: string | null
           stripe_payment_intent_id: string | null
@@ -223,10 +227,14 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          backer_email?: string | null
           created_at?: string
           environment?: string
           id?: string
           item_id: string
+          refunded_cents?: number
+          rolled_over_at?: string | null
+          rolled_over_from_item_id?: string | null
           status?: Database["public"]["Enums"]["pledge_status"]
           stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -235,10 +243,14 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          backer_email?: string | null
           created_at?: string
           environment?: string
           id?: string
           item_id?: string
+          refunded_cents?: number
+          rolled_over_at?: string | null
+          rolled_over_from_item_id?: string | null
           status?: Database["public"]["Enums"]["pledge_status"]
           stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -249,6 +261,13 @@ export type Database = {
           {
             foreignKeyName: "pledges_item_id_fkey"
             columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "board_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pledges_rolled_over_from_item_id_fkey"
+            columns: ["rolled_over_from_item_id"]
             isOneToOne: false
             referencedRelation: "board_items"
             referencedColumns: ["id"]
@@ -508,6 +527,8 @@ export type Database = {
         | "cancelled"
         | "failed"
         | "pending"
+        | "paid"
+        | "refunded"
       result_verdict: "consistent" | "concerns" | "failed" | "insufficient"
     }
     CompositeTypes: {
@@ -652,6 +673,8 @@ export const Constants = {
         "cancelled",
         "failed",
         "pending",
+        "paid",
+        "refunded",
       ],
       result_verdict: ["consistent", "concerns", "failed", "insufficient"],
     },
