@@ -22,8 +22,11 @@ export function useUserRoles(userId: string | null) {
       }
     };
     load();
+    // Unique topic per hook instance: several components use this hook at once,
+    // and reusing a topic that is already subscribed throws
+    // "cannot add `postgres_changes` callbacks ... after `subscribe()`".
     const ch = supabase
-      .channel(`roles-${userId}`)
+      .channel(`roles-${userId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${userId}` },
