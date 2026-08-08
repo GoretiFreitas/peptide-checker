@@ -19,11 +19,36 @@ function publicSupabase() {
 
 // ---------------- Public reads ----------------
 
+type FundingTotal = { item_id: string; pledged_cents: number; backer_count: number };
+
+/**
+ * Funding totals are aggregated server-side from `pledges` using the admin
+ * client. Only anonymized aggregates (sum + count) leave the server, so no
+ * pledge rows are exposed and no RLS-bypassing database view is required.
+ */
+async function computeFundingTotals(itemId?: string): Promise<FundingTotal[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  let query = (supabaseAdmin as any)
+    .from("pledges")
+    .select("item_id, amount_cents, status")
+    .in("status", ["paid", "authorized", "captured"]);
+  if (itemId) query = query.eq("item_id", itemId);
+  const { data } = await query;
+  const map = new Map<string, FundingTotal>();
+  for (const row of ((data as any[]) ?? [])) {
+    const t = map.get(row.item_id) ?? { item_id: row.item_id, pledged_cents: 0, backer_count: 0 };
+    t.pledged_cents += Number(row.amount_cents ?? 0);
+    t.backer_count += 1;
+    map.set(row.item_id, t);
+  }
+  return [...map.values()];
+}
+
 export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicSupabase();
   const [items, totals] = await Promise.all([
     sb.from("board_items").select("*").order("created_at", { ascending: false }),
-    sb.from("item_funding_totals").select("*"),
+    computeFundingTotals(),
   ]);
   const itemRows = items.data ?? [];
   // Fetch anonymized backer strip using admin client (bypasses RLS) — anonymized fields only.
@@ -47,7 +72,7 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
   );
   return {
     items: itemRows,
-    totals: totals.data ?? [],
+    totals,
     backers: backersByItem,
   };
 });
@@ -60,16 +85,17 @@ export const getItem = createServerFn({ method: "POST" })
     const [item, stretch, totals, result] = await Promise.all([
       sb.from("board_items").select("*").eq("id", data.id).maybeSingle(),
       sb.from("board_stretch_goals").select("*").eq("item_id", data.id),
-      sb.from("item_funding_totals").select("*").eq("item_id", data.id).maybeSingle(),
+      computeFundingTotals(data.id),
       sb.from("results").select("*").eq("item_id", data.id).maybeSingle(),
     ]);
     return {
       item: item.data,
       stretch: stretch.data ?? [],
-      totals: totals.data,
+      totals: totals[0] ?? { item_id: data.id, pledged_cents: 0, backer_count: 0 },
       result: result.data,
     };
   });
+
 
 export const getFundTotal = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicSupabase();
