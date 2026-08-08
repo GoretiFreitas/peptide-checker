@@ -491,22 +491,7 @@ export type Database = {
       }
     }
     Views: {
-      item_funding_totals: {
-        Row: {
-          backer_count: number | null
-          item_id: string | null
-          pledged_cents: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pledges_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "board_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
