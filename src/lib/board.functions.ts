@@ -146,28 +146,30 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         .maybeSingle();
       if (!item) return { error: "Item not found" };
       if (item.state !== "funding" && item.state !== "nominated") {
-        return { error: "This item is not currently accepting pledges." };
+        return { error: "This item is not currently accepting contributions." };
       }
       if (item.us_only && !data.us_shipping_ack) {
         return { error: "This campaign requires a US-shipping confirmation." };
       }
 
-      // Insert pending pledge
-      const { data: pledge, error: insertErr } = await context.supabase
-        .from("pledges")
+      const { data: { user } } = await context.supabase.auth.getUser();
+
+      // Insert pending contribution (becomes `paid` on the verified webhook)
+      const { data: pledge, error: insertErr } = await (context.supabase
+        .from("pledges") as any)
         .insert({
           item_id: data.item_id,
           user_id: context.userId,
           amount_cents: data.amount_cents,
           status: "pending",
           environment: data.environment,
+          backer_email: user?.email ?? null,
         })
         .select()
         .single();
-      if (insertErr || !pledge) return { error: insertErr?.message ?? "Could not create pledge" };
+      if (insertErr || !pledge) return { error: insertErr?.message ?? "Could not create contribution" };
 
       const stripe = createStripeClient(data.environment as StripeEnv);
-      const { data: { user } } = await context.supabase.auth.getUser();
 
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -177,22 +179,20 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
           {
             price_data: {
               currency: "usd",
-              product_data: { name: `Pledge — ${item.product_name}` },
+              product_data: { name: `Contribution — ${item.product_name}` },
               unit_amount: data.amount_cents,
             },
             quantity: 1,
           },
         ],
         payment_intent_data: {
-          capture_method: "manual",
-          description: `Testing board pledge — ${item.product_name}`,
+          description: `Testing fund contribution — ${item.product_name}`,
           metadata: {
             pledge_id: pledge.id,
             item_id: item.id,
             user_id: context.userId,
           },
         },
-        
         metadata: {
           pledge_id: pledge.id,
           item_id: item.id,
@@ -212,6 +212,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+
 
 // ---------------- Admin actions ----------------
 
