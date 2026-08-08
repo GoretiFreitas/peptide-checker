@@ -9,6 +9,7 @@ import { getItem, createPledgeCheckout } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
+import { useMembership } from "@/hooks/useMembership";
 
 export const Route = createFileRoute("/fund/$itemId")({
   loader: async ({ params }) => {
@@ -39,6 +40,9 @@ export const Route = createFileRoute("/fund/$itemId")({
       links: [{ rel: "canonical", href: `/fund/${params.itemId}` }],
     };
   },
+  validateSearch: (search: Record<string, unknown>): { pledged?: string } => ({
+    pledged: typeof search.pledged === "string" ? search.pledged : undefined,
+  }),
   component: ItemDetail,
   errorComponent: ({ error }) => (
     <div className="p-10 font-serif">Something went wrong: {error.message}</div>
@@ -62,6 +66,8 @@ const stateStyle: Record<string, string> = {
 
 function ItemDetail() {
   const { itemId } = Route.useParams();
+  const { pledged: justPledged } = Route.useSearch();
+  const { isMember, signedIn: memberSignedIn } = useMembership();
   const navigate = useNavigate();
   const query = useQuery({
     queryKey: ["board", itemId],
@@ -158,6 +164,44 @@ function ItemDetail() {
         <h1 className="mt-3 font-serif text-5xl tracking-tight text-foreground">
           {item.product_name}
         </h1>
+
+        {justPledged && (
+          <div className="mt-6 rounded-md border border-[color:var(--badge-pass-fg)]/25 bg-[color:var(--badge-pass-bg)] p-5">
+            <div className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--badge-pass-fg)]">
+              Contribution received — membership active
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
+              Thank you. Your contribution funds independent lab testing, and because you backed
+              $5 or more you are now a member: full test reports and campaign progress are
+              unlocked for you. Membership is $5/month — backing a pool keeps it active.
+            </p>
+            <Link
+              to="/support"
+              className="mt-3 inline-block text-[11px] tracking-[0.18em] uppercase underline"
+            >
+              Manage membership
+            </Link>
+          </div>
+        )}
+
+        {!fundable && !isMember && (
+          <div className="mt-6 rounded-md border border-border bg-card p-5">
+            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
+              Members only
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-foreground">
+              Progress updates and published test reports are for members. Membership is $5/month —
+              or back any funding pool with $5 or more and you become a member automatically.
+            </p>
+            <Link
+              to={memberSignedIn ? "/support" : "/auth"}
+              {...(memberSignedIn ? {} : { search: { next: "/support" } as any })}
+              className="mt-3 inline-block rounded-md bg-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-background"
+            >
+              Become a member
+            </Link>
+          </div>
+        )}
         {item.description && (
           <p className="mt-4 max-w-[65ch] text-sm leading-relaxed text-foreground">
             {item.description}
