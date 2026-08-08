@@ -212,7 +212,7 @@ function BoardIndex() {
                 <CampaignCard
                   key={item.id}
                   item={item}
-                  totals={totalsById.get(item.id) ?? { pledged_cents: 0, backer_count: 0 }}
+                  totals={(totalsById.get(item.id) as any) ?? { pledged_cents: 0, backer_count: 0 }}
                   backers={backersById[item.id] ?? []}
                   isMember={isMember}
                   signedIn={signedIn}
