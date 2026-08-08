@@ -8,6 +8,8 @@ import {
   createStripeClient,
   getStripeErrorMessage,
 } from "@/lib/stripe.server";
+import { computeFundingTotals } from "@/lib/board-totals.server";
+
 
 function publicSupabase() {
   return createClient<Database>(
