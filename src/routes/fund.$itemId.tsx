@@ -223,9 +223,14 @@ function ItemDetail() {
               Back this test
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your card is authorized now and only charged if the goal is reached before the
-              deadline. If it isn't, the authorization is released.
+              Contributions are charged immediately and always fund independent testing. If this
+              batch doesn&apos;t reach its goal by the deadline, your contribution rolls over to the
+              most-backed active campaign and you receive that campaign&apos;s results.
             </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Charged immediately. Final — funds independent testing either way.
+            </p>
+
             {!clientSecret && (
               <>
                 <div className="mt-4 flex flex-wrap gap-2">
