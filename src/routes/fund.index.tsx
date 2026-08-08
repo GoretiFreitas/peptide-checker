@@ -9,6 +9,7 @@ import { getBoard, getFundTotal, getItem, createPledgeCheckout } from "@/lib/boa
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
+import { useMembership } from "@/hooks/useMembership";
 
 // -------------------------------------------------------------------
 // Tier ladders per lab. Cumulative thresholds — a tier "unlocks" when
@@ -101,6 +102,7 @@ function BoardIndex() {
   );
   const backersById = (board.data as any)?.backers ?? {};
 
+  const { isMember, signedIn } = useMembership();
   const [pledgeFor, setPledgeFor] = useState<string | null>(null);
   const [howOpen, setHowOpen] = useState(false);
 
@@ -212,6 +214,8 @@ function BoardIndex() {
                   item={item}
                   totals={totalsById.get(item.id) ?? { pledged_cents: 0, backer_count: 0 }}
                   backers={backersById[item.id] ?? []}
+                  isMember={isMember}
+                  signedIn={signedIn}
                   onBack={() => setPledgeFor(item.id)}
                 />
               ))}
@@ -244,11 +248,15 @@ function CampaignCard({
   item,
   totals,
   backers,
+  isMember,
+  signedIn,
   onBack,
 }: {
   item: any;
   totals: { pledged_cents: number; backer_count: number };
   backers: Backer[];
+  isMember: boolean;
+  signedIn: boolean;
   onBack: () => void;
 }) {
   const lab: string = item.lab ?? "janoshik";
@@ -391,22 +399,28 @@ function CampaignCard({
                 Back this test
               </button>
             </>
-          ) : isTesting ? (
-            <Link
-              to="/fund/$itemId"
-              params={{ itemId: item.id }}
-              className="flex-1 rounded-md border border-border bg-card px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-foreground transition-colors hover:border-foreground/40"
-            >
-              Follow progress
-            </Link>
-          ) : isPublished ? (
-            <Link
-              to="/fund/$itemId"
-              params={{ itemId: item.id }}
-              className="flex-1 rounded-md bg-primary px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              View report
-            </Link>
+          ) : isTesting || isPublished ? (
+            isMember ? (
+              <Link
+                to="/fund/$itemId"
+                params={{ itemId: item.id }}
+                className={
+                  isPublished
+                    ? "flex-1 rounded-md bg-primary px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-primary-foreground transition-colors hover:bg-primary/90"
+                    : "flex-1 rounded-md border border-border bg-card px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-foreground transition-colors hover:border-foreground/40"
+                }
+              >
+                {isPublished ? "View report" : "Follow progress"}
+              </Link>
+            ) : (
+              <Link
+                to={signedIn ? "/support" : "/auth"}
+                {...(signedIn ? {} : { search: { next: "/support" } as any })}
+                className="flex-1 rounded-md border border-foreground/25 bg-background px-4 py-2.5 text-center text-[11px] font-medium tracking-[0.22em] uppercase text-foreground transition-colors hover:bg-secondary"
+              >
+                {isPublished ? "View report" : "Follow progress"} — members only
+              </Link>
+            )
           ) : (
             <span className="flex-1 rounded-md border border-dashed border-border px-4 py-2.5 text-center text-[11px] tracking-[0.22em] uppercase text-muted-foreground">
               Not accepting contributions
@@ -414,10 +428,18 @@ function CampaignCard({
           )}
         </div>
 
-        {canBack && (
+        {canBack ? (
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-            Charged immediately. Final — funds independent testing either way.
+            Charged immediately. Final — funds independent testing either way. Backing $5 or more
+            makes you a member.
           </p>
+        ) : (
+          (isTesting || isPublished) &&
+          !isMember && (
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              Members only — $5/month, or back any funding pool with $5+ to become a member.
+            </p>
+          )
         )}
       </div>
     </article>

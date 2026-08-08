@@ -129,6 +129,18 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
         environment: env,
       })
       .eq("id", pledgeId);
+
+    // Backing a pool with $5 or more grants membership (supporter role).
+    const backerUserId = session.metadata?.user_id;
+    const amountTotal = Number(session.amount_total ?? 0);
+    if (backerUserId && amountTotal >= 500) {
+      await grantRole(admin, backerUserId, "supporter");
+      await admin.from("admin_activity").insert({
+        kind: "membership",
+        message: `Membership granted from a $${(amountTotal / 100).toFixed(2)} fund contribution.`,
+        meta: { user_id: backerUserId, pledge_id: pledgeId },
+      });
+    }
     return;
   }
 
