@@ -337,7 +337,7 @@ function ItemDetail() {
           </div>
         )}
 
-        {result && (
+        {result && isMember && (
           <div className="mt-6 rounded-sm border border-border bg-card p-6">
             <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
               Test result — {result.verdict}
