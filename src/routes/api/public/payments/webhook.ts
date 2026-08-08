@@ -208,6 +208,19 @@ async function handleChargeRefunded(charge: any, env: StripeEnv) {
   const total = Number(charge.amount ?? 0);
   const status = refunded >= total ? "refunded" : "partially_refunded";
 
+  // Mirror refunds onto fund contributions (manual admin refunds only —
+  // a missed goal never triggers a refund; it rolls over instead).
+  await admin
+    .from("pledges")
+    .update({
+      refunded_cents: refunded,
+      ...(status === "refunded" ? { status: "refunded" } : {}),
+    })
+    .eq("stripe_payment_intent_id", pi)
+    .eq("environment", env);
+
+
+
   const { data: purchase } = await admin
     .from("purchases")
     .select("id, user_id, kind, fund_credit_cents, credited_to_fund")
