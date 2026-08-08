@@ -5,7 +5,7 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from "@stripe/react-stripe-js";
-import { getItem, createPledgeCheckout } from "@/lib/board.functions";
+import { getItem, createPledgeCheckout, confirmPledgeSession } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,8 +40,9 @@ export const Route = createFileRoute("/fund/$itemId")({
       links: [{ rel: "canonical", href: `/fund/${params.itemId}` }],
     };
   },
-  validateSearch: (search: Record<string, unknown>): { pledged?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { pledged?: string; session_id?: string } => ({
     pledged: typeof search.pledged === "string" ? search.pledged : undefined,
+    session_id: typeof search.session_id === "string" ? search.session_id : undefined,
   }),
   component: ItemDetail,
   errorComponent: ({ error }) => (
@@ -66,7 +67,7 @@ const stateStyle: Record<string, string> = {
 
 function ItemDetail() {
   const { itemId } = Route.useParams();
-  const { pledged: justPledged } = Route.useSearch();
+  const { pledged: justPledged, session_id: returnedSession } = Route.useSearch();
   const { isMember, signedIn: memberSignedIn } = useMembership();
   const navigate = useNavigate();
   const query = useQuery({
@@ -78,10 +79,41 @@ function ItemDetail() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const storageKey = `pledge_session_${itemId}`;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
   }, []);
+
+  // Confirm the checkout on return. Uses the session id from the return URL,
+  // falling back to the one stashed when checkout started (in case the query
+  // string is lost on redirect). The webhook stays the source of truth; this
+  // just makes the success + membership state immediate.
+  useEffect(() => {
+    let cancelled = false;
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
+    const sid = returnedSession ?? stored;
+    if (!sid) return;
+    setConfirming(true);
+    confirmPledgeSession({ data: { session_id: sid, environment: getStripeEnvironment() } })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.paid) {
+          window.localStorage.removeItem(storageKey);
+          setPaidAmount(res.amount_cents);
+          query.refetch();
+        }
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setConfirming(false));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnedSession, itemId]);
 
   const pledge = useMutation({
     mutationFn: async () => {
@@ -89,7 +121,7 @@ function ItemDetail() {
         data: {
           item_id: itemId,
           amount_cents: amount,
-          return_url: `${window.location.origin}/fund/${itemId}?pledged=1`,
+          return_url: `${window.location.origin}/fund/${itemId}?pledged=1&session_id={CHECKOUT_SESSION_ID}`,
           environment: getStripeEnvironment(),
         },
       });
@@ -97,6 +129,10 @@ function ItemDetail() {
       return res.clientSecret;
     },
     onSuccess: (secret) => {
+      // The client secret is `<session_id>_secret_<...>` — stash the session id
+      // so we can still confirm if the return URL loses its query string.
+      const sid = secret.split("_secret")[0];
+      if (sid.startsWith("cs_")) window.localStorage.setItem(storageKey, sid);
       setClientSecret(secret);
       setCheckoutError(null);
     },
@@ -165,15 +201,22 @@ function ItemDetail() {
           {item.product_name}
         </h1>
 
-        {justPledged && (
+        {confirming && !paidAmount && (
+          <div className="mt-6 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
+            Confirming your payment…
+          </div>
+        )}
+
+        {(paidAmount !== null || justPledged) && (
           <div className="mt-6 rounded-md border border-[color:var(--badge-pass-fg)]/25 bg-[color:var(--badge-pass-bg)] p-5">
             <div className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--badge-pass-fg)]">
-              Contribution received — membership active
+              Payment successful — membership active
             </div>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
-              Thank you. Your contribution funds independent lab testing, and because you backed
-              $5 or more you are now a member: full test reports and campaign progress are
-              unlocked for you. Membership is $5/month — backing a pool keeps it active.
+              Thank you{paidAmount ? ` — your ${money(paidAmount)} contribution was received` : ""}.
+              It funds independent lab testing, and because you backed $5 or more you are now a
+              member: full test reports and campaign progress are unlocked for you. Membership is
+              $5/month — backing a pool keeps it active.
             </p>
             <Link
               to="/support"

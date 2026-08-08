@@ -217,6 +217,74 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
     }
   });
 
+/**
+ * Confirm a completed pledge checkout straight from the return page.
+ * The webhook is still the source of truth, but this makes the success state
+ * (and membership) immediate even if the webhook is delayed. Idempotent.
+ */
+export const confirmPledgeSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        session_id: z.string().min(10).max(200),
+        environment: z.enum(["sandbox", "live"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{
+    paid: boolean;
+    amount_cents: number;
+    member: boolean;
+    error?: string;
+  }> => {
+    try {
+      const stripe = createStripeClient(data.environment as StripeEnv);
+      const session = await stripe.checkout.sessions.retrieve(data.session_id);
+      const meta = (session.metadata ?? {}) as Record<string, string>;
+      if (meta.user_id !== context.userId) {
+        return { paid: false, amount_cents: 0, member: false, error: "Not found" };
+      }
+      if (session.payment_status === "unpaid") {
+        return { paid: false, amount_cents: 0, member: false };
+      }
+      const amount = Number(session.amount_total ?? 0);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const admin = supabaseAdmin as any;
+
+      if (meta.pledge_id) {
+        const paymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent as { id?: string } | null)?.id ?? null;
+        await admin
+          .from("pledges")
+          .update({
+            status: "paid",
+            stripe_payment_intent_id: paymentIntentId,
+            backer_email: session.customer_details?.email ?? null,
+            environment: data.environment,
+          })
+          .eq("id", meta.pledge_id)
+          .neq("status", "refunded");
+      }
+
+      let member = false;
+      if (amount >= 500) {
+        await admin
+          .from("user_roles")
+          .upsert(
+            { user_id: context.userId, role: "supporter" },
+            { onConflict: "user_id,role", ignoreDuplicates: true },
+          );
+        member = true;
+      }
+      return { paid: true, amount_cents: amount, member };
+    } catch (error) {
+      return { paid: false, amount_cents: 0, member: false, error: getStripeErrorMessage(error) };
+    }
+  });
+
 
 // ---------------- Admin actions ----------------
 
