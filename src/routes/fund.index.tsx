@@ -41,7 +41,7 @@ export const Route = createFileRoute("/fund/")({
       {
         name: "description",
         content:
-          "Pool funds, test the batch once, share the intel. Back independent lab tests of specific peptide batches — only charged if the goal is met.",
+          "Pool funds, test the batch once, share the intel. Contributions are charged immediately and always fund independent testing.",
       },
       { property: "og:title", content: "Crowdfunded Peptide Testing Fund" },
       {
@@ -124,7 +124,7 @@ function BoardIndex() {
             published for every backer.
           </p>
           <p className="mt-3 text-[13px] italic text-muted-foreground">
-            Some batches fund in under 40 pledges.
+            Some batches fund in under 40 contributions.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
@@ -379,7 +379,7 @@ function CampaignCard({
                 type="button"
                 onClick={onBack}
                 className="shrink-0 rounded-md border border-foreground/20 bg-background px-3 py-2.5 text-[11px] font-medium tracking-[0.16em] uppercase text-foreground transition-colors hover:border-foreground/40 hover:bg-secondary"
-                aria-label="Quick pledge $5"
+                aria-label="Contribute $5"
               >
                 $5
               </button>
@@ -409,15 +409,14 @@ function CampaignCard({
             </Link>
           ) : (
             <span className="flex-1 rounded-md border border-dashed border-border px-4 py-2.5 text-center text-[11px] tracking-[0.22em] uppercase text-muted-foreground">
-              Not accepting pledges
+              Not accepting contributions
             </span>
           )}
         </div>
 
         {canBack && (
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-            You're charged only if the campaign reaches its goal. Funds cover independent lab
-            testing; results are shared with all backers.
+            Charged immediately. Final — funds independent testing either way.
           </p>
         )}
       </div>
@@ -564,7 +563,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
       setClientSecret(secret);
       setError(null);
     },
-    onError: (e: any) => setError(e.message ?? "Could not start pledge"),
+    onError: (e: any) => setError(e.message ?? "Could not start contribution"),
   });
 
   const canSubmit = amount >= 500 && (!usOnly || usAck);
@@ -609,7 +608,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
           <>
             <div className="mt-6">
               <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-                Pledge amount
+                Contribution amount
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 $5 joins the pool — many small backers fund one test.
@@ -656,7 +655,7 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
                     onFocus={() => setCustomFocused(true)}
                     onChange={(e) => setAmount(Math.round(Number(e.target.value) * 100))}
                     className="w-20 bg-transparent py-2 text-sm focus:outline-none"
-                    aria-label="Custom pledge amount"
+                    aria-label="Custom contribution amount"
                   />
                 </div>
               </div>
@@ -693,14 +692,12 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
               {pledge.isPending
                 ? "…"
                 : signedIn
-                ? `Authorize ${money(amount)} pledge`
-                : "Sign in to pledge"}
+                ? `Contribute ${money(amount)}`
+                : "Sign in to contribute"}
             </button>
 
             <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-              You're charged only if the campaign reaches its goal. Funds cover independent lab
-              testing; results are shared with all backers. If the goal isn't met by the
-              deadline, the authorization is released and no one is charged.
+              Contributions are charged immediately and always fund independent testing. If this batch doesn't reach its goal by the deadline, your contribution rolls over to the most-backed active campaign and you receive that campaign's results.
             </p>
           </>
         ) : (
