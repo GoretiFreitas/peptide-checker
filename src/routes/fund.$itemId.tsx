@@ -25,7 +25,7 @@ export const Route = createFileRoute("/fund/$itemId")({
       ? `${name} — Peptide Testing Fund`
       : "Peptide Testing Fund — Certificate Checker";
     const desc = name
-      ? `Back the independent test of ${name}. Pledge to fund; only charged if the goal is met.`
+      ? `Back the independent test of ${name}. Contributions are charged immediately and always fund independent testing.`
       : "Back an independent test of a peptide product on the community testing fund.";
     return {
       meta: [
@@ -94,7 +94,7 @@ function ItemDetail() {
       setClientSecret(secret);
       setCheckoutError(null);
     },
-    onError: (e: any) => setCheckoutError(e.message ?? "Could not start pledge"),
+    onError: (e: any) => setCheckoutError(e.message ?? "Could not start contribution"),
   });
 
   if (query.isLoading) {
@@ -172,7 +172,7 @@ function ItemDetail() {
             <div className="mt-3 flex items-center justify-between text-sm">
               <span className="text-foreground">
                 <strong>{money(pledged)}</strong>{" "}
-                <span className="text-muted-foreground">pledged of {money(goal)}</span>
+                <span className="text-muted-foreground">contributed of {money(goal)}</span>
               </span>
               <span className="text-muted-foreground">
                 {totals?.backers ?? 0} backer{(totals?.backers ?? 0) === 1 ? "" : "s"}
@@ -223,9 +223,14 @@ function ItemDetail() {
               Back this test
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your card is authorized now and only charged if the goal is reached before the
-              deadline. If it isn't, the authorization is released.
+              Contributions are charged immediately and always fund independent testing. If this
+              batch doesn&apos;t reach its goal by the deadline, your contribution rolls over to the
+              most-backed active campaign and you receive that campaign&apos;s results.
             </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Charged immediately. Final — funds independent testing either way.
+            </p>
+
             {!clientSecret && (
               <>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -271,7 +276,7 @@ function ItemDetail() {
                   disabled={pledge.isPending || amount < 500}
                   className="mt-5 rounded-sm bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background disabled:opacity-40"
                 >
-                  {pledge.isPending ? "…" : signedIn ? `Pledge ${money(amount)}` : "Sign in to pledge"}
+                  {pledge.isPending ? "…" : signedIn ? `Contribute ${money(amount)}` : "Sign in to contribute"}
                 </button>
               </>
             )}

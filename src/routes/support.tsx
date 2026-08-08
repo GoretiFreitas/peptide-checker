@@ -17,7 +17,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { SupporterBadge } from "@/components/SupporterBadge";
 
 export const Route = createFileRoute("/support")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { checkout?: string } => ({
     checkout: typeof s.checkout === "string" ? s.checkout : undefined,
   }),
   head: () => ({

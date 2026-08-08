@@ -5,7 +5,8 @@ import {
   getBoard,
   isAdmin,
   adminSetItem,
-  adminSettlePledges,
+  adminCloseCampaign,
+  adminFundMetrics,
   adminPublishResult,
 } from "@/lib/board.functions";
 import { applyStripeTaxCodes } from "@/lib/payments.functions";
@@ -62,12 +63,18 @@ function AdminPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
   });
 
-  const settle = useMutation({
-    mutationFn: (d: { item_id: string; action: "capture" | "cancel" }) =>
-      adminSettlePledges({
-        data: { ...d, environment: getStripeEnvironment() },
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
+  const metrics = useQuery({
+    queryKey: ["fund-metrics"],
+    queryFn: () => adminFundMetrics(),
+    enabled: ready === "ok",
+  });
+
+  const close = useMutation({
+    mutationFn: (item_id: string) => adminCloseCampaign({ data: { item_id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["board"] });
+      qc.invalidateQueries({ queryKey: ["fund-metrics"] });
+    },
   });
 
   const publish = useMutation({
@@ -109,6 +116,8 @@ function AdminPage() {
 
         <TaxCodesButton />
 
+        <MetricsPanel data={metrics.data} loading={metrics.isLoading} />
+
 
         <div className="mt-8 space-y-6">
           {items.map((item: any) => (
@@ -117,9 +126,9 @@ function AdminPage() {
               item={item}
               totals={totalsById.get(item.id) as any}
               onSave={(patch) => setItem.mutate({ id: item.id, ...patch })}
-              onSettle={(action) => settle.mutate({ item_id: item.id, action })}
+              onClose={() => close.mutate(item.id)}
               onPublish={(payload) => publish.mutate({ item_id: item.id, ...payload })}
-              busy={setItem.isPending || settle.isPending || publish.isPending}
+              busy={setItem.isPending || close.isPending || publish.isPending}
             />
           ))}
         </div>
@@ -128,7 +137,191 @@ function AdminPage() {
   );
 }
 
+function usd(cents: number) {
+  return `$${(Number(cents ?? 0) / 100).toFixed(2)}`;
+}
+
+function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="mt-6 h-40 animate-pulse rounded-sm border border-border bg-card" />
+    );
+  }
+  if (!data) return null;
+  const tx: any[] = data.transactions ?? [];
+
+  const exportCsv = () => {
+    const header = [
+      "created_at",
+      "backer_email",
+      "campaign",
+      "amount_usd",
+      "refunded_usd",
+      "status",
+      "stripe_payment_intent_id",
+      "rolled_over",
+    ];
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = tx.map((r) =>
+      [
+        r.created_at,
+        r.backer_email,
+        r.campaign,
+        (r.amount_cents / 100).toFixed(2),
+        (r.refunded_cents / 100).toFixed(2),
+        r.status,
+        r.stripe_payment_intent_id,
+        r.rolled_over ? "yes" : "no",
+      ]
+        .map(esc)
+        .join(","),
+    );
+    const blob = new Blob([[header.join(","), ...rows].join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `contributions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className="mt-8 space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Gross revenue", value: usd(data.gross_cents) },
+          { label: "Net of refunds", value: usd(data.net_cents) },
+          { label: "Unique paying backers", value: String(data.unique_backers) },
+          { label: "Contributions", value: String(data.contributions) },
+        ].map((c) => (
+          <div key={c.label} className="rounded-sm border border-border bg-card p-4">
+            <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+              {c.label}
+            </div>
+            <div className="mt-1 font-serif text-2xl text-foreground">{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-sm border border-border bg-card p-4">
+          <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+            Per campaign
+          </div>
+          <table className="mt-3 w-full text-sm">
+            <thead>
+              <tr className="text-left text-[10px] tracking-[0.14em] uppercase text-muted-foreground">
+                <th className="py-1">Campaign</th>
+                <th className="py-1 text-right">Gross</th>
+                <th className="py-1 text-right">Contribs</th>
+                <th className="py-1 text-right">Backers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.campaigns ?? []).map((c: any) => (
+                <tr key={c.item_id} className="border-t border-border/60">
+                  <td className="py-1.5 pr-2">{c.product_name}</td>
+                  <td className="py-1.5 text-right">{usd(c.gross_cents)}</td>
+                  <td className="py-1.5 text-right">{c.contributions}</td>
+                  <td className="py-1.5 text-right">{c.unique_backers}</td>
+                </tr>
+              ))}
+              {(data.campaigns ?? []).length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-3 text-xs text-muted-foreground">
+                    No paid contributions yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rounded-sm border border-border bg-card p-4">
+          <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+            Daily revenue (last 30 days with activity)
+          </div>
+          <table className="mt-3 w-full text-sm">
+            <tbody>
+              {(data.daily ?? []).map((d: any) => (
+                <tr key={d.day} className="border-t border-border/60">
+                  <td className="py-1.5 font-mono text-xs">{d.day}</td>
+                  <td className="py-1.5 text-right">{usd(d.cents)}</td>
+                </tr>
+              ))}
+              {(data.daily ?? []).length === 0 && (
+                <tr>
+                  <td className="py-3 text-xs text-muted-foreground">No revenue yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-sm border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+            Transactions — audit trail ({tx.length})
+          </div>
+          <button
+            onClick={exportCsv}
+            className="rounded-sm border border-foreground px-3 py-1.5 text-[11px] tracking-[0.18em] uppercase hover:bg-foreground hover:text-background"
+          >
+            Export CSV
+          </button>
+        </div>
+        <div className="mt-3 max-h-[420px] overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-card">
+              <tr className="text-left text-[10px] tracking-[0.14em] uppercase text-muted-foreground">
+                <th className="py-1">When</th>
+                <th className="py-1">Backer</th>
+                <th className="py-1">Campaign</th>
+                <th className="py-1 text-right">Amount</th>
+                <th className="py-1">Status</th>
+                <th className="py-1">Payment intent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tx.map((r) => (
+                <tr key={r.id} className="border-t border-border/60">
+                  <td className="py-1.5 pr-2 font-mono text-xs">
+                    {String(r.created_at).slice(0, 16).replace("T", " ")}
+                  </td>
+                  <td className="py-1.5 pr-2">{r.backer_email}</td>
+                  <td className="py-1.5 pr-2">
+                    {r.campaign}
+                    {r.rolled_over && (
+                      <span className="ml-1 text-[10px] uppercase text-muted-foreground">
+                        (rolled over)
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-1.5 text-right">{usd(r.amount_cents)}</td>
+                  <td className="py-1.5">{r.status}</td>
+                  <td className="py-1.5 font-mono text-xs">{r.stripe_payment_intent_id}</td>
+                </tr>
+              ))}
+              {tx.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-3 text-xs text-muted-foreground">
+                    No transactions yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TaxCodesButton() {
+
   const [state, setState] = useState<{ msg: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const run = async () => {
@@ -167,14 +360,14 @@ function AdminRow({
   item,
   totals,
   onSave,
-  onSettle,
+  onClose,
   onPublish,
   busy,
 }: {
   item: any;
   totals: any;
   onSave: (patch: any) => void;
-  onSettle: (action: "capture" | "cancel") => void;
+  onClose: () => void;
   onPublish: (payload: any) => void;
   busy: boolean;
 }) {
@@ -294,17 +487,17 @@ function AdminRow({
         </button>
         <button
           disabled={busy}
-          onClick={() => onSettle("capture")}
+          onClick={() => {
+            if (
+              window.confirm(
+                "Close this campaign? If the goal is met it is marked funded; otherwise every contribution rolls over to the most-backed active campaign. No refunds are issued.",
+              )
+            )
+              onClose();
+          }}
           className="rounded-sm border border-border px-4 py-2 text-[10px] font-medium tracking-[0.22em] uppercase text-foreground disabled:opacity-40"
         >
-          Capture pledges
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => onSettle("cancel")}
-          className="rounded-sm border border-border px-4 py-2 text-[10px] font-medium tracking-[0.22em] uppercase text-foreground disabled:opacity-40"
-        >
-          Cancel pledges
+          Close campaign
         </button>
         <button
           onClick={() => setPublishOpen((v) => !v)}

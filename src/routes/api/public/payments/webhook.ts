@@ -113,22 +113,25 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 // ------- One-time purchase handling (donations, registry) -------
 
 async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stripeEnvKey: StripeEnv) {
-  // Pledge sessions live under board.functions and use `metadata.pledge_id` — keep that path.
+  // Fund contributions live under board.functions and use `metadata.pledge_id`.
   const pledgeId = session.metadata?.pledge_id;
   if (pledgeId) {
+    if (session.payment_status === "unpaid") return;
     const admin = await getAdmin();
     const paymentIntentId =
       typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
     await admin
       .from("pledges")
       .update({
-        status: "authorized",
+        status: "paid",
         stripe_payment_intent_id: paymentIntentId ?? null,
+        backer_email: session.customer_details?.email ?? session.customer_email ?? null,
         environment: env,
       })
       .eq("id", pledgeId);
     return;
   }
+
 
   // Subscription checkouts: the subscription.created event will handle entitlement.
   if (session.mode !== "payment") return;
@@ -204,6 +207,19 @@ async function handleChargeRefunded(charge: any, env: StripeEnv) {
   const refunded = Number(charge.amount_refunded ?? 0);
   const total = Number(charge.amount ?? 0);
   const status = refunded >= total ? "refunded" : "partially_refunded";
+
+  // Mirror refunds onto fund contributions (manual admin refunds only —
+  // a missed goal never triggers a refund; it rolls over instead).
+  await admin
+    .from("pledges")
+    .update({
+      refunded_cents: refunded,
+      ...(status === "refunded" ? { status: "refunded" } : {}),
+    })
+    .eq("stripe_payment_intent_id", pi)
+    .eq("environment", env);
+
+
 
   const { data: purchase } = await admin
     .from("purchases")
@@ -344,16 +360,10 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
   if (!pledgeId) return;
 
   switch (event.type) {
-    case "payment_intent.amount_capturable_updated":
-      await admin
-        .from("pledges")
-        .update({ status: "authorized", stripe_payment_intent_id: obj.id, environment: env })
-        .eq("id", pledgeId);
-      break;
     case "payment_intent.succeeded":
       await admin
         .from("pledges")
-        .update({ status: "captured", stripe_payment_intent_id: obj.id })
+        .update({ status: "paid", stripe_payment_intent_id: obj.id, environment: env })
         .eq("id", pledgeId);
       break;
     case "payment_intent.canceled":
@@ -364,6 +374,7 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
         .eq("id", pledgeId);
       break;
   }
+
 }
 
 // ------- Dispatcher -------

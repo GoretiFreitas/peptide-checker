@@ -35,7 +35,7 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
         .from("pledges")
         .select("amount_cents, created_at, profiles:profiles!pledges_user_id_fkey(handle)")
         .eq("item_id", it.id)
-        .in("status", ["authorized", "captured"])
+        .in("status", ["paid", "authorized", "captured"])
         .order("created_at", { ascending: false })
         .limit(12);
       backersByItem[it.id] = ((data as any[]) ?? []).map((r) => ({
@@ -146,28 +146,30 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         .maybeSingle();
       if (!item) return { error: "Item not found" };
       if (item.state !== "funding" && item.state !== "nominated") {
-        return { error: "This item is not currently accepting pledges." };
+        return { error: "This item is not currently accepting contributions." };
       }
       if (item.us_only && !data.us_shipping_ack) {
         return { error: "This campaign requires a US-shipping confirmation." };
       }
 
-      // Insert pending pledge
-      const { data: pledge, error: insertErr } = await context.supabase
-        .from("pledges")
+      const { data: { user } } = await context.supabase.auth.getUser();
+
+      // Insert pending contribution (becomes `paid` on the verified webhook)
+      const { data: pledge, error: insertErr } = await (context.supabase
+        .from("pledges") as any)
         .insert({
           item_id: data.item_id,
           user_id: context.userId,
           amount_cents: data.amount_cents,
           status: "pending",
           environment: data.environment,
+          backer_email: user?.email ?? null,
         })
         .select()
         .single();
-      if (insertErr || !pledge) return { error: insertErr?.message ?? "Could not create pledge" };
+      if (insertErr || !pledge) return { error: insertErr?.message ?? "Could not create contribution" };
 
       const stripe = createStripeClient(data.environment as StripeEnv);
-      const { data: { user } } = await context.supabase.auth.getUser();
 
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -177,22 +179,20 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
           {
             price_data: {
               currency: "usd",
-              product_data: { name: `Pledge — ${item.product_name}` },
+              product_data: { name: `Contribution — ${item.product_name}` },
               unit_amount: data.amount_cents,
             },
             quantity: 1,
           },
         ],
         payment_intent_data: {
-          capture_method: "manual",
-          description: `Testing board pledge — ${item.product_name}`,
+          description: `Testing fund contribution — ${item.product_name}`,
           metadata: {
             pledge_id: pledge.id,
             item_id: item.id,
             user_id: context.userId,
           },
         },
-        
         metadata: {
           pledge_id: pledge.id,
           item_id: item.id,
@@ -212,6 +212,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+
 
 // ---------------- Admin actions ----------------
 
@@ -260,52 +261,188 @@ export const adminSetItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const adminSettlePledges = createServerFn({ method: "POST" })
+/**
+ * Close a campaign: run the goal check. If funded, mark it funded.
+ * Otherwise roll every paid contribution over to the most-backed active
+ * campaign (backers become backers of that campaign) — no refunds.
+ */
+export const adminCloseCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z
-      .object({
-        item_id: z.string().uuid(),
-        action: z.enum(["capture", "cancel"]),
-        environment: z.enum(["sandbox", "live"]),
-      })
-      .parse(d),
-  )
+  .inputValidator((d) => z.object({ item_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireAdmin(context.supabase, context.userId);
-    const { data: pledges } = await context.supabase
+    const sb: any = context.supabase;
+
+    const { data: item } = await sb
+      .from("board_items")
+      .select("id, product_name, goal_cents, state")
+      .eq("id", data.item_id)
+      .maybeSingle();
+    if (!item) throw new Error("Campaign not found");
+
+    const { data: contributions } = await sb
       .from("pledges")
-      .select("id, stripe_payment_intent_id, amount_cents")
+      .select("id, amount_cents")
       .eq("item_id", data.item_id)
-      .eq("status", "authorized");
-    if (!pledges?.length) return { ok: true, processed: 0 };
+      .in("status", ["paid", "captured", "authorized"]);
+    const raised = (contributions ?? []).reduce(
+      (s: number, p: any) => s + Number(p.amount_cents ?? 0),
+      0,
+    );
+    const goal = Number(item.goal_cents ?? 0);
 
-    const stripe = createStripeClient(data.environment as StripeEnv);
-    let processed = 0;
-    for (const p of pledges) {
-      if (!p.stripe_payment_intent_id) continue;
-      try {
-        if (data.action === "capture") {
-          await stripe.paymentIntents.capture(p.stripe_payment_intent_id);
-          await context.supabase.from("pledges").update({ status: "captured" }).eq("id", p.id);
-        } else {
-          await stripe.paymentIntents.cancel(p.stripe_payment_intent_id);
-          await context.supabase.from("pledges").update({ status: "cancelled" }).eq("id", p.id);
-        }
-        processed++;
-      } catch (e) {
-        console.error("Settle error", p.id, e);
-      }
+    if (goal > 0 && raised >= goal) {
+      await sb.from("board_items").update({ state: "funded" }).eq("id", item.id);
+      await sb.from("admin_activity").insert({
+        kind: "campaign_closed",
+        message: `${item.product_name} reached its goal — marked funded ($${(raised / 100).toFixed(2)}).`,
+        meta: { item_id: item.id, raised_cents: raised, goal_cents: goal },
+      });
+      return { ok: true, outcome: "funded" as const, raised_cents: raised, rolled_over: 0 };
     }
 
-    // Move state
-    if (data.action === "capture") {
-      await context.supabase.from("board_items").update({ state: "procuring" }).eq("id", data.item_id);
-    } else {
-      await context.supabase.from("board_items").update({ state: "expired" }).eq("id", data.item_id);
+    // Find the most-backed other active campaign
+    const { data: candidates } = await sb
+      .from("board_items")
+      .select("id, product_name, state")
+      .in("state", ["nominated", "funding"])
+      .neq("id", item.id);
+    const { data: totals } = await sb.from("item_funding_totals").select("*");
+    const totalsById = new Map(
+      (totals ?? []).map((t: any) => [t.item_id, Number(t.pledged_cents ?? 0)]),
+    );
+    const target = (candidates ?? [])
+      .slice()
+      .sort(
+        (a: any, b: any) =>
+          Number(totalsById.get(b.id) ?? 0) - Number(totalsById.get(a.id) ?? 0),
+      )[0];
+
+    if (!target) {
+      await sb.from("board_items").update({ state: "expired" }).eq("id", item.id);
+      await sb.from("admin_activity").insert({
+        kind: "campaign_closed",
+        message: `${item.product_name} missed its goal and no active campaign was available for rollover.`,
+        meta: { item_id: item.id, raised_cents: raised },
+      });
+      return { ok: true, outcome: "no_target" as const, raised_cents: raised, rolled_over: 0 };
     }
-    return { ok: true, processed };
+
+    const now = new Date().toISOString();
+    const ids = (contributions ?? []).map((c: any) => c.id);
+    if (ids.length) {
+      await sb
+        .from("pledges")
+        .update({
+          item_id: target.id,
+          rolled_over_from_item_id: item.id,
+          rolled_over_at: now,
+        })
+        .in("id", ids);
+    }
+    await sb.from("board_items").update({ state: "expired" }).eq("id", item.id);
+    await sb.from("admin_activity").insert({
+      kind: "rollover",
+      message: `${item.product_name} missed its goal — $${(raised / 100).toFixed(2)} from ${ids.length} contribution(s) rolled over to ${target.product_name}. Backers must be notified.`,
+      meta: {
+        from_item_id: item.id,
+        to_item_id: target.id,
+        raised_cents: raised,
+        contributions: ids.length,
+      },
+    });
+
+    return {
+      ok: true,
+      outcome: "rolled_over" as const,
+      raised_cents: raised,
+      rolled_over: ids.length,
+      target: target.product_name as string,
+    };
   });
+
+/** Revenue + backer metrics across all campaigns. Admin only. */
+export const adminFundMetrics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireAdmin(context.supabase, context.userId);
+    const sb: any = context.supabase;
+    const { data: rows } = await sb
+      .from("pledges")
+      .select(
+        "id, item_id, user_id, backer_email, amount_cents, refunded_cents, status, created_at, stripe_payment_intent_id, rolled_over_from_item_id, board_items(product_name)",
+      )
+      .in("status", ["paid", "captured", "refunded"])
+      .order("created_at", { ascending: false })
+      .limit(5000);
+
+    const list = (rows ?? []) as any[];
+    const paid = list.filter((r) => r.status !== "refunded");
+    const grossCents = paid.reduce((s, r) => s + Number(r.amount_cents ?? 0), 0);
+    const refundedCents = list.reduce((s, r) => s + Number(r.refunded_cents ?? 0), 0);
+    const uniqueBackers = new Set(
+      paid.map((r) => r.user_id ?? r.backer_email ?? r.id),
+    ).size;
+
+    const perCampaign = new Map<string, any>();
+    for (const r of paid) {
+      const key = r.item_id;
+      const c = perCampaign.get(key) ?? {
+        item_id: key,
+        product_name: r.board_items?.product_name ?? "—",
+        gross_cents: 0,
+        contributions: 0,
+        backers: new Set<string>(),
+      };
+      c.gross_cents += Number(r.amount_cents ?? 0);
+      c.contributions += 1;
+      c.backers.add(r.user_id ?? r.backer_email ?? r.id);
+      perCampaign.set(key, c);
+    }
+    const campaigns = [...perCampaign.values()]
+      .map((c) => ({
+        item_id: c.item_id,
+        product_name: c.product_name,
+        gross_cents: c.gross_cents,
+        contributions: c.contributions,
+        unique_backers: c.backers.size,
+      }))
+      .sort((a, b) => b.gross_cents - a.gross_cents);
+
+    const perDay = new Map<string, number>();
+    for (const r of paid) {
+      const day = String(r.created_at).slice(0, 10);
+      perDay.set(day, (perDay.get(day) ?? 0) + Number(r.amount_cents ?? 0));
+    }
+    const daily = [...perDay.entries()]
+      .map(([day, cents]) => ({ day, cents }))
+      .sort((a, b) => (a.day < b.day ? 1 : -1))
+      .slice(0, 30);
+
+    const transactions = list.map((r) => ({
+      id: r.id,
+      created_at: r.created_at,
+      backer_email: r.backer_email ?? "—",
+      campaign: r.board_items?.product_name ?? "—",
+      amount_cents: Number(r.amount_cents ?? 0),
+      refunded_cents: Number(r.refunded_cents ?? 0),
+      status: r.status === "refunded" ? "refunded" : "paid",
+      stripe_payment_intent_id: r.stripe_payment_intent_id ?? "",
+      rolled_over: !!r.rolled_over_from_item_id,
+    }));
+
+    return {
+      gross_cents: grossCents,
+      refunded_cents: refundedCents,
+      net_cents: grossCents - refundedCents,
+      unique_backers: uniqueBackers,
+      contributions: paid.length,
+      campaigns,
+      daily,
+      transactions,
+    };
+  });
+
 
 export const adminPublishResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

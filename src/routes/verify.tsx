@@ -25,7 +25,7 @@ export const Route = createFileRoute("/verify")({
     ],
     links: [{ rel: "canonical", href: "https://peptidescheck.xyz/verify" }],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { hash?: string; batch?: string } => ({
     hash: typeof s.hash === "string" ? s.hash : undefined,
     batch: typeof s.batch === "string" ? s.batch : undefined,
   }),
