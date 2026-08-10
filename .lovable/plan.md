@@ -26,7 +26,7 @@ Directly below, an optional identity block (never on the payment form):
 
 Public, no login needed. Pre-filled and editable text for each channel:
 
-- **X**: "I just backed independent lab testing of [Peptide, Batch ID] on @desciers' PeptidesCheck. $X of $Y funded — one test, results shared with everyone: [URL]" → opens the X intent
+- **X**: "I just backed independent lab testing of [Peptide, Batch ID] on PeptidesCheck.xyz. $X of $Y funded — one test, results shared with everyone: [URL]" → opens the X intent
 - **Reddit**: subreddit picker (default suggestion r/DecentralizedSciences) plus prefilled title and body → opens the Reddit submit intent
 - **Instagram**: no web intent — a downloadable PNG share card (peptide name, batch ID, progress bar, PeptidesCheck branding, research-use disclaimer) plus "Copy caption"
 - **Copy link** fallback
