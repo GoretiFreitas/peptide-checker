@@ -1,74 +1,63 @@
+# Post-contribution engagement flow for /fund
 
-# PeptidesCheck improvement plan
+Adds a proper success step, a share page, and public backer lists — using the site's current funding model (charged immediately; if a batch misses its goal the contribution rolls over to the most-backed active campaign). Handle editing is for signed-in backers; the Instagram card is generated in the browser.
 
-Scope: edit the existing site. Keep the tool, the board, and the support pages. No em-dashes, spell out acronyms on first use, and never invent lab partners or metrics.
+## 1. Contribution success step
 
-## 1. Unified brand identity
-- Header wordmark becomes "PeptidesCheck, by Descier Science." Remove "Knowledge Orchestration" everywhere (`SiteHeader.tsx`, footer, any meta tags).
-- Footer brand line: "PeptidesCheck, by Descier Science. Copyright 2026." Replace "Descier Cooperative" wording. Keep Reddit, X (@desciers), and peptides@descier.science.
-- Update route `<head>` titles/descriptions across `index.tsx`, `board.*`, `support.tsx`, `registry.*`, `admin.tsx`, `auth.tsx` to use PeptidesCheck.
+Replaces the small green banner on `/fund/<id>` after payment with a dedicated success panel showing:
 
-## 2. Homepage hero rewrite (`src/routes/index.tsx`)
-- H1 "PeptidesCheck."
-- Subhead: "Read a peptide Certificate of Analysis (COA) and see, field by field, what the document actually reports, what it leaves out, and whether it can be trusted."
-- Primary CTA "Check a certificate" scrolls to the inputs.
-- Trust line: "Independent and community-supported. No login, and no personal data stored."
+- Campaign name + batch identifier
+- Amount contributed
+- Progress: raised of goal, backer count
+- What happens next: the batch goes to an independent lab and results are published to every backer; if the goal isn't met the contribution rolls over to the most-backed active campaign
+- Membership confirmation (unchanged behaviour)
+- Primary CTA: "Help this batch get tested — share" → share page
+- Secondary: "Back to campaigns"
 
-## 3. Results panel improvements (`ResultsPanel.tsx`)
-- Keep per-field green / amber / red status.
-- Add a one-sentence overall summary at the top with caveats stated inline.
-- Promote missing sterility or endotoxin testing to a prominent red callout above the fields list.
-- Add a shareable verifiable result link that points at the Authenticity Register entry (section 6) once the certificate is registered.
+Directly below, an optional identity block (never on the payment form):
 
-## 4. New homepage sections (below the tool)
-- "What we check": purity claim vs stated method; sequence / mass / batch consistency; presence of sterility and endotoxin testing; identity and impurities; signs of reused, templated, or forged certificates.
-- "How it works": document parsed by an artificial intelligence (AI) reader, deterministic rule-based scoring on top, cross-reference against the Authenticity Register. Mark heuristic checks as heuristic.
-- "What a certificate review can and cannot tell you" callout: paper not vial, purity not safety, injectables need independent lab testing.
-- "Who this is for": researchers, clinics, compounders, distributors, buyers.
-- "Next step": link to the board and to support.
-- "Trust and independence": run by Descier Science, community-supported, no named lab partners unless real (leave blank for now).
+- "X handle (optional — shown on this campaign's backer list)"
+- Visibility: Show my handle / Show initials only / Anonymous — **default: initials only**
+- Checkbox: hide my amount on the backer list
+- Handle rules: strip a leading `@`, 1–15 chars, letters/numbers/underscore only. Self-reported, never shown with a verification badge.
+- Editable later from the same campaign page (and from the contributions list) while signed in.
 
-## 5. Authenticity Register (new feature)
-New Supabase table `certificate_register`, append-only:
-- `id`, `sha256` (unique), `batch_id`, `product_name`, `sequence`, `purity_percent`, `issuing_lab`, `issue_date`, `first_seen_at`, `seen_count`.
-- Row Level Security: public SELECT, INSERT only via a `SECURITY INVOKER` server function; no UPDATE or DELETE policy for anyone (append-only enforced by absence of policies plus a trigger that blocks UPDATE/DELETE).
-- GRANTs: SELECT to anon and authenticated; INSERT to authenticated and anon via server function only.
+## 2. Share page — `/fund/<id>/share`
 
-Client-side SHA-256 hashing of the raw text or file bytes with `crypto.subtle.digest` before submission. After a check completes, a server function `registerCertificate` upserts by hash (increments `seen_count` on repeat) and returns the register entry.
+Public, no login needed. Pre-filled and editable text for each channel:
 
-New route `/verify` with a lookup form:
-- Input: batch number or SHA-256 hash.
-- Server function `lookupRegister` returns one of "Registered and unaltered", "Seen before under a different batch", or "Not in the register."
-- Deep-linkable result URL `/verify?hash=…` for shareable proof.
+- **X**: "I just backed independent lab testing of [Peptide, Batch ID] on @desciers' PeptidesCheck. $X of $Y funded — one test, results shared with everyone: [URL]" → opens the X intent
+- **Reddit**: subreddit picker (default suggestion r/DecentralizedSciences) plus prefilled title and body → opens the Reddit submit intent
+- **Instagram**: no web intent — a downloadable PNG share card (peptide name, batch ID, progress bar, PeptidesCheck branding, research-use disclaimer) plus "Copy caption"
+- **Copy link** fallback
 
-Note: the plan says "share register data model with the Trusted verification site and the Evidence Register application." Those systems are not in this codebase. I will build the schema so it is portable (stable column names, hash as the natural key), but I will not attempt cross-project sync in this pass. Flag if you want a shared Supabase project instead.
+All default copy is research-use framed: no claim of safety, efficacy, purity outcome, or human use. The disclaimer line is baked into the card image and appended to the caption.
 
-## 6. English / Portuguese language toggle
-- Add a lightweight i18n layer: a `useLocale()` hook backed by `localStorage`, a small `t(key)` dictionary in `src/lib/i18n/{en,pt}.ts` covering the homepage copy, results labels, register copy, footer, and consent text.
-- Toggle in the header (EN | PT). No route changes.
+## 3. Backer list per campaign
 
-## 7. Consent and legal
-- Consent checkbox on the nomination form and on any future batch-testing request form, worded for the Lei Geral de Proteção de Dados (LGPD) and the General Data Protection Regulation (GDPR). Checker and verifier stay no-login and store no personal data.
-- Keep the molecular-biology-grade research-only disclaimer in the footer.
+A "Backers" section on each campaign page, visible without login:
 
-## 8. Optional CRM webhook (stub)
-Add a server-side `POST` handler under `src/routes/api/public/testing-request.ts` that validates a batch-testing payload and, if `CRM_WEBHOOK_URL` env is set, forwards it. No-op if unset. No client form yet; the endpoint is groundwork.
+- Display identity per the backer's own choice: handle (clickable link to x.com/handle), initials with a generated avatar, or "Anonymous"
+- Amount, unless hidden by that backer
+- Date
+- Anonymous contributions still count in the backer total and raised amount
+- Amounts reflect the charged state of each contribution
 
-## 9. Housekeeping
-- Grep for "Cooperative", "Knowledge Orchestration", em-dashes ("—") in user-visible copy and replace. Code comments left alone.
-- Softens footer "testing of research peptides" to "certificate review and authenticity, plus a community board that funds independent laboratory testing."
+## 4. Constraints honoured
 
-## Out of scope
-- Cross-project register sharing with Trusted / Evidence Register apps.
-- Adding real lab partners or testimonials.
-- Any change to Stripe, board funding math, or admin flows.
+Mobile-first layout, no third-party tracking scripts (share links are plain outbound URLs, the card is drawn locally), share page and backer list are public.
+
+---
 
 ## Technical notes
-- Migration for `certificate_register` will include CREATE TABLE, GRANTs, ENABLE RLS, SELECT policy for anon+authenticated, and a `BEFORE UPDATE OR DELETE` trigger that raises to enforce append-only.
-- Hashing runs in the browser; the server re-hashes on submission and rejects mismatches to prevent spoofed hashes.
-- i18n stays local (no external library) to avoid Worker-runtime issues.
 
-## Questions before I start
-1. Portuguese copy: should I machine-translate the English strings myself, or do you want to supply the PT translations?
-2. Register scope: hash the raw certificate text/file bytes only, or also normalize (strip whitespace) so trivially reformatted duplicates still collide? I recommend both — store raw hash and normalized hash.
-3. CRM webhook: leave as an env-gated stub for now, or skip entirely until you have a CRM chosen?
+**Database migration** on `pledges`: `x_handle text`, `display_mode text default 'initials'` (`handle` | `initials` | `anonymous`), `hide_amount boolean default false`. Validation of handle format enforced both client-side and in the server function.
+
+**Server functions** (`src/lib/board.functions.ts`):
+- `getCampaignBackers` — public (publishable-key client via an anon-readable projection or admin client returning only display-safe fields): display name, avatar seed, amount-or-null, date, handle-or-null. Never returns user ids or emails.
+- `updatePledgeIdentity` — `requireSupabaseAuth`, scoped to the caller's own pledge; validates and normalises the handle.
+- `getItem` extended to return batch id and the backer list for the campaign page.
+
+**Routes**: new `src/routes/fund.$itemId.share.tsx` (public, SSR, own `head()` with title/description/og tags). Success panel and identity form become components under `src/components/fund/`.
+
+**Share card**: `<canvas>` drawn client-side at 1080×1350, exported via `toBlob` and downloaded; no server image endpoint.
