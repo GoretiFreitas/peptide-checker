@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { getItem } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -8,13 +7,18 @@ export const Route = createFileRoute("/fund/$itemId/share")({
   loader: async ({ params }) => {
     try {
       const res = await getItem({ data: { id: params.itemId } });
-      return { productName: (res.item as { product_name?: string } | null)?.product_name ?? null };
+      return {
+        itemId: params.itemId,
+        item: (res.item as Record<string, any> | null) ?? null,
+        totals: (res.totals as Record<string, any> | null) ?? null,
+        backers: (res.backers as any[]) ?? [],
+      };
     } catch {
-      return { productName: null };
+      return { itemId: params.itemId, item: null, totals: null, backers: [] };
     }
   },
   head: ({ params, loaderData }) => {
-    const name = loaderData?.productName;
+    const name = loaderData?.item?.product_name;
     const title = name
       ? `Share ${name} — Peptide Testing Fund`
       : "Share a campaign — Peptide Testing Fund";
@@ -45,23 +49,17 @@ function money(cents: number) {
 }
 
 function SharePage() {
-  const { itemId } = Route.useParams();
-  const query = useQuery({
-    queryKey: ["board", itemId],
-    queryFn: () => getItem({ data: { id: itemId } }),
-  });
+  const { itemId, item, totals } = Route.useLoaderData();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
   const [subreddit, setSubreddit] = useState("DecentralizedSciences");
 
-  const item = query.data?.item as any;
-  const totals = query.data?.totals as any;
-  const goal = item?.goal_cents ?? 0;
-  const pledged = totals?.pledged_cents ?? 0;
+  const goal = (item?.goal_cents as number) ?? 0;
+  const pledged = (totals?.pledged_cents as number) ?? 0;
   const pct = goal > 0 ? Math.min(100, Math.round((pledged / goal) * 100)) : 0;
   const campaignUrl = typeof window !== "undefined" ? `${window.location.origin}/fund/${itemId}` : "";
-  const batchId = item?.batch_id ?? "";
-  const productName = item?.product_name ?? "this campaign";
+  const batchId = (item?.batch_id as string) ?? "";
+  const productName = (item?.product_name as string) ?? "this campaign";
 
   const xText = `I just backed independent lab testing of ${productName}${batchId ? `, batch ${batchId}` : ""} on PeptidesCheck.xyz. ${money(pledged)} of ${money(goal)} funded — one test, results shared with everyone: ${campaignUrl}`;
 
@@ -124,7 +122,7 @@ function SharePage() {
     ctx.fillText(`${money(pledged)} of ${money(goal)}`, 80, 740);
     ctx.fillStyle = "#5A5A5A";
     ctx.font = "400 30px Inter, sans-serif";
-    ctx.fillText(`${pct}% funded · ${totals?.backers ?? 0} backer${(totals?.backers ?? 0) === 1 ? "" : "s"}`, 80, 790);
+    ctx.fillText(`${pct}% funded · ${(totals?.backers as number) ?? 0} backer${((totals?.backers as number) ?? 0) === 1 ? "" : "s"}`, 80, 790);
 
     ctx.fillStyle = "#6B6B6B";
     ctx.font = "400 26px Inter, sans-serif";
@@ -149,15 +147,6 @@ function SharePage() {
       setTimeout(() => setCopied(false), 2000);
     } catch {}
   };
-
-  if (query.isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <SiteHeader />
-        <div className="mx-auto max-w-[900px] px-6 py-12 text-sm text-muted-foreground">Loading…</div>
-      </div>
-    );
-  }
 
   if (!item) {
     return (
