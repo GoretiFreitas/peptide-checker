@@ -43,15 +43,8 @@ export const Route = createFileRoute("/fund/$itemId")({
       links: [{ rel: "canonical", href: `/fund/${params.itemId}` }],
     };
   },
-  validateSearch: (search: Record<string, unknown>): { pledged?: string; session_id?: string } => ({
-    pledged:
-      typeof search.pledged === "string"
-        ? search.pledged
-        : typeof search.pledged === "number"
-          ? String(search.pledged)
-          : typeof search.pledged === "boolean"
-            ? String(search.pledged)
-            : undefined,
+  validateSearch: (search: Record<string, unknown>): { pledged?: number; session_id?: string } => ({
+    pledged: typeof search.pledged === "number" ? search.pledged : undefined,
     session_id: typeof search.session_id === "string" ? search.session_id : undefined,
   }),
   component: ItemDetail,
