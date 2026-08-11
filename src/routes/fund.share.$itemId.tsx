@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { getItem } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 
-export const Route = createFileRoute("/fund/$itemId/share")({
+export const Route = createFileRoute("/fund/share/$itemId")({
   loader: async ({ params }) => {
     try {
       const res = await getItem({ data: { id: params.itemId } });

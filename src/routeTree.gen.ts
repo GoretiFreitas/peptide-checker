@@ -22,7 +22,7 @@ import { Route as FundNominateRouteImport } from './routes/fund.nominate'
 import { Route as FundItemIdRouteImport } from './routes/fund.$itemId'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as FundItemIdShareRouteImport } from './routes/fund.$itemId.share'
+import { Route as FundShareItemIdRouteImport } from './routes/fund.share.$itemId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -94,10 +94,10 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
-const FundItemIdShareRoute = FundItemIdShareRouteImport.update({
-  id: '/share',
-  path: '/share',
-  getParentRoute: () => FundItemIdRoute,
+const FundShareItemIdRoute = FundShareItemIdRouteImport.update({
+  id: '/fund/share/$itemId',
+  path: '/fund/share/$itemId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
@@ -127,13 +127,13 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/fund/$itemId': typeof FundItemIdRouteWithChildren
+  '/fund/$itemId': typeof FundItemIdRoute
   '/fund/nominate': typeof FundNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
   '/fund/': typeof FundIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/fund/$itemId/share': typeof FundItemIdShareRoute
+  '/fund/share/$itemId': typeof FundShareItemIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -146,13 +146,13 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/fund/$itemId': typeof FundItemIdRouteWithChildren
+  '/fund/$itemId': typeof FundItemIdRoute
   '/fund/nominate': typeof FundNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
   '/fund': typeof FundIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/fund/$itemId/share': typeof FundItemIdShareRoute
+  '/fund/share/$itemId': typeof FundShareItemIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -166,13 +166,13 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/fund/$itemId': typeof FundItemIdRouteWithChildren
+  '/fund/$itemId': typeof FundItemIdRoute
   '/fund/nominate': typeof FundNominateRoute
   '/registry/$itemId': typeof RegistryItemIdRoute
   '/fund/': typeof FundIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/fund/$itemId/share': typeof FundItemIdShareRoute
+  '/fund/share/$itemId': typeof FundShareItemIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -193,7 +193,7 @@ export interface FileRouteTypes {
     | '/fund/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
-    | '/fund/$itemId/share'
+    | '/fund/share/$itemId'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -212,7 +212,7 @@ export interface FileRouteTypes {
     | '/fund'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
-    | '/fund/$itemId/share'
+    | '/fund/share/$itemId'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -231,7 +231,7 @@ export interface FileRouteTypes {
     | '/fund/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
-    | '/fund/$itemId/share'
+    | '/fund/share/$itemId'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -245,12 +245,13 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  FundItemIdRoute: typeof FundItemIdRouteWithChildren
+  FundItemIdRoute: typeof FundItemIdRoute
   FundNominateRoute: typeof FundNominateRoute
   RegistryItemIdRoute: typeof RegistryItemIdRoute
   FundIndexRoute: typeof FundIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  FundShareItemIdRoute: typeof FundShareItemIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -347,12 +348,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/fund/$itemId/share': {
-      id: '/fund/$itemId/share'
-      path: '/share'
-      fullPath: '/fund/$itemId/share'
-      preLoaderRoute: typeof FundItemIdShareRouteImport
-      parentRoute: typeof FundItemIdRoute
+    '/fund/share/$itemId': {
+      id: '/fund/share/$itemId'
+      path: '/fund/share/$itemId'
+      fullPath: '/fund/share/$itemId'
+      preLoaderRoute: typeof FundShareItemIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
@@ -378,18 +379,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface FundItemIdRouteChildren {
-  FundItemIdShareRoute: typeof FundItemIdShareRoute
-}
-
-const FundItemIdRouteChildren: FundItemIdRouteChildren = {
-  FundItemIdShareRoute: FundItemIdShareRoute,
-}
-
-const FundItemIdRouteWithChildren = FundItemIdRoute._addFileChildren(
-  FundItemIdRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -401,12 +390,13 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  FundItemIdRoute: FundItemIdRouteWithChildren,
+  FundItemIdRoute: FundItemIdRoute,
   FundNominateRoute: FundNominateRoute,
   RegistryItemIdRoute: RegistryItemIdRoute,
   FundIndexRoute: FundIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  FundShareItemIdRoute: FundShareItemIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
