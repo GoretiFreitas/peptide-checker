@@ -83,8 +83,10 @@ function ItemDetail() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [memberGranted, setMemberGranted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
+
 
   const storageKey = `pledge_session_${itemId}`;
 
