@@ -44,7 +44,14 @@ export const Route = createFileRoute("/fund/$itemId")({
     };
   },
   validateSearch: (search: Record<string, unknown>): { pledged?: string; session_id?: string } => ({
-    pledged: typeof search.pledged === "string" ? search.pledged : undefined,
+    pledged:
+      typeof search.pledged === "string"
+        ? search.pledged
+        : typeof search.pledged === "number"
+          ? String(search.pledged)
+          : typeof search.pledged === "boolean"
+            ? String(search.pledged)
+            : undefined,
     session_id: typeof search.session_id === "string" ? search.session_id : undefined,
   }),
   component: ItemDetail,
