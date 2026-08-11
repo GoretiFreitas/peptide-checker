@@ -70,7 +70,7 @@ export const getItem = createServerFn({ method: "POST" })
       sb.from("board_stretch_goals").select("*").eq("item_id", data.id),
       computeFundingTotals(data.id),
       sb.from("results").select("*").eq("item_id", data.id).maybeSingle(),
-      getCampaignBackers({ data: { item_id: data.id } }),
+      listCampaignBackers(data.id),
     ]);
     return {
       item: item.data,
@@ -83,36 +83,8 @@ export const getItem = createServerFn({ method: "POST" })
 
 export const getCampaignBackers = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ item_id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows } = await (supabaseAdmin as any)
-      .from("pledges")
-      .select("id, amount_cents, created_at, user_id, x_handle, display_mode, hide_amount")
-      .eq("item_id", data.item_id)
-      .in("status", ["paid", "captured", "authorized"])
-      .order("created_at", { ascending: false })
-      .limit(500);
+  .handler(async ({ data }) => listCampaignBackers(data.item_id));
 
-    const list = (rows as any[]) ?? [];
-    const handles = await fetchProfileHandles(list.map((r) => r.user_id));
-
-    return list.map((r) => {
-      const mode = r.display_mode ?? "initials";
-      const handle = typeof r.x_handle === "string" ? r.x_handle.trim() : null;
-      const profileHandle = handles[r.user_id] ?? null;
-      const initials = (profileHandle?.[0] ?? "?").toUpperCase();
-      return {
-        id: r.id,
-        created_at: r.created_at,
-        amount_cents: Number(r.amount_cents ?? 0),
-        hide_amount: !!r.hide_amount,
-        display_mode: mode,
-        handle: mode === "handle" && handle ? handle : null,
-        initials: mode === "initials" ? initials : null,
-      };
-    });
-
-  });
 
 
 export const getFundTotal = createServerFn({ method: "GET" }).handler(async () => {
