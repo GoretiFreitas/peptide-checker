@@ -87,18 +87,19 @@ export const getCampaignBackers = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await (supabaseAdmin as any)
       .from("pledges")
-      .select(
-        "id, amount_cents, created_at, x_handle, display_mode, hide_amount, profiles:profiles!pledges_user_id_fkey(handle)",
-      )
+      .select("id, amount_cents, created_at, user_id, x_handle, display_mode, hide_amount")
       .eq("item_id", data.item_id)
       .in("status", ["paid", "captured", "authorized"])
       .order("created_at", { ascending: false })
       .limit(500);
 
-    return ((rows as any[]) ?? []).map((r) => {
+    const list = (rows as any[]) ?? [];
+    const handles = await fetchProfileHandles(list.map((r) => r.user_id));
+
+    return list.map((r) => {
       const mode = r.display_mode ?? "initials";
       const handle = typeof r.x_handle === "string" ? r.x_handle.trim() : null;
-      const profileHandle = r.profiles?.handle ?? null;
+      const profileHandle = handles[r.user_id] ?? null;
       const initials = (profileHandle?.[0] ?? "?").toUpperCase();
       return {
         id: r.id,
@@ -110,6 +111,7 @@ export const getCampaignBackers = createServerFn({ method: "POST" })
         initials: mode === "initials" ? initials : null,
       };
     });
+
   });
 
 
