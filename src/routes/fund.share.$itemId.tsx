@@ -57,7 +57,7 @@ function SharePage() {
   const goal = (item?.goal_cents as number) ?? 0;
   const pledged = (totals?.pledged_cents as number) ?? 0;
   const pct = goal > 0 ? Math.min(100, Math.round((pledged / goal) * 100)) : 0;
-  const campaignUrl = typeof window !== "undefined" ? `${window.location.origin}/fund/${itemId}` : "";
+  const campaignUrl = `https://peptidescheck.xyz/fund/${itemId}`;
   const batchId = (item?.batch_id as string) ?? "";
   const productName = (item?.product_name as string) ?? "this campaign";
 
