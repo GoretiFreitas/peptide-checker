@@ -110,9 +110,11 @@ function ItemDetail() {
         if (res.paid) {
           window.localStorage.removeItem(storageKey);
           setPaidAmount(res.amount_cents);
+          setMemberGranted(!!res.member);
           setPledgeId(res.pledge_id ?? null);
           query.refetch();
         }
+
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
