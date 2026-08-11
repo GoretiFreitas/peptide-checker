@@ -251,9 +251,9 @@ function ItemDetail() {
           </div>
         )}
 
-        {(paidAmount !== null || justPledged) && signedIn && (
+        {(paidAmount !== null || justPledged) && signedIn && pledgeId && (
           <PledgeIdentityForm
-            pledgeId={pledgeId ?? "placeholder"}
+            pledgeId={pledgeId}
             initial={{ display_mode: "initials", hide_amount: false }}
           />
         )}
