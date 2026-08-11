@@ -32,9 +32,9 @@ export const Route = createFileRoute("/fund/share/$itemId")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
-        { property: "og:url", content: `/fund/${params.itemId}/share` },
+        { property: "og:url", content: `/fund/share/${params.itemId}` },
       ],
-      links: [{ rel: "canonical", href: `/fund/${params.itemId}/share` }],
+      links: [{ rel: "canonical", href: `/fund/share/${params.itemId}` }],
     };
   },
   component: SharePage,
