@@ -9,6 +9,8 @@ import {
   getStripeErrorMessage,
 } from "@/lib/stripe.server";
 import { computeFundingTotals } from "@/lib/board-totals.server";
+import { fetchProfileHandles } from "@/lib/profiles.server";
+
 
 
 function publicSupabase() {
