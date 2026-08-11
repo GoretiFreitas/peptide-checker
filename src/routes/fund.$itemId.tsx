@@ -83,8 +83,10 @@ function ItemDetail() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [memberGranted, setMemberGranted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
+
 
   const storageKey = `pledge_session_${itemId}`;
 
@@ -108,9 +110,11 @@ function ItemDetail() {
         if (res.paid) {
           window.localStorage.removeItem(storageKey);
           setPaidAmount(res.amount_cents);
+          setMemberGranted(!!res.member);
           setPledgeId(res.pledge_id ?? null);
           query.refetch();
         }
+
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
@@ -242,12 +246,19 @@ function ItemDetail() {
                 Back to campaigns
               </Link>
             </div>
-            {paidAmount && paidAmount >= 500 && (
-              <p className="mt-4 text-[11px] leading-relaxed text-[color:var(--badge-pass-fg)]">
-                Because you backed $5 or more, you are now a member: full test reports and campaign
-                progress are unlocked for you. Membership stays active while you back a pool.
-              </p>
+            {(memberGranted || (paidAmount ?? 0) >= 500 || (justPledged && isMember)) && (
+              <div className="mt-4 rounded-sm border border-[color:var(--badge-pass-fg)]/25 bg-background/50 p-4">
+                <div className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--badge-pass-fg)]">
+                  Membership active
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--badge-pass-fg)]">
+                  Because you backed $5 or more, membership is now active on your account: full test
+                  reports and campaign progress are unlocked for you. Membership stays active while
+                  you back a pool — no separate subscription needed.
+                </p>
+              </div>
             )}
+
           </div>
         )}
 
