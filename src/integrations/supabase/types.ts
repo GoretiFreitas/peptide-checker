@@ -213,7 +213,9 @@ export type Database = {
           amount_cents: number
           backer_email: string | null
           created_at: string
+          display_mode: string
           environment: string
+          hide_amount: boolean
           id: string
           item_id: string
           refunded_cents: number
@@ -224,12 +226,15 @@ export type Database = {
           stripe_payment_intent_id: string | null
           updated_at: string
           user_id: string
+          x_handle: string | null
         }
         Insert: {
           amount_cents: number
           backer_email?: string | null
           created_at?: string
+          display_mode?: string
           environment?: string
+          hide_amount?: boolean
           id?: string
           item_id: string
           refunded_cents?: number
@@ -240,12 +245,15 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           updated_at?: string
           user_id: string
+          x_handle?: string | null
         }
         Update: {
           amount_cents?: number
           backer_email?: string | null
           created_at?: string
+          display_mode?: string
           environment?: string
+          hide_amount?: boolean
           id?: string
           item_id?: string
           refunded_cents?: number
@@ -256,6 +264,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           updated_at?: string
           user_id?: string
+          x_handle?: string | null
         }
         Relationships: [
           {
