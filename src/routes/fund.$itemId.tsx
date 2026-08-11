@@ -229,7 +229,7 @@ function ItemDetail() {
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
-                to="/fund/$itemId/share"
+                to="/fund/share/$itemId"
                 params={{ itemId: item.id }}
                 className="inline-block rounded-sm bg-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-background"
               >
