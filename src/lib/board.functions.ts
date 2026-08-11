@@ -60,18 +60,51 @@ export const getItem = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const sb = publicSupabase();
-    const [item, stretch, totals, result] = await Promise.all([
+    const [item, stretch, totals, result, backers] = await Promise.all([
       sb.from("board_items").select("*").eq("id", data.id).maybeSingle(),
       sb.from("board_stretch_goals").select("*").eq("item_id", data.id),
       computeFundingTotals(data.id),
       sb.from("results").select("*").eq("item_id", data.id).maybeSingle(),
+      getCampaignBackers({ data: { item_id: data.id } }),
     ]);
     return {
       item: item.data,
       stretch: stretch.data ?? [],
       totals: totals[0] ?? { item_id: data.id, pledged_cents: 0, backer_count: 0 },
       result: result.data,
+      backers,
     };
+  });
+
+export const getCampaignBackers = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ item_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await (supabaseAdmin as any)
+      .from("pledges")
+      .select(
+        "id, amount_cents, created_at, x_handle, display_mode, hide_amount, profiles:profiles!pledges_user_id_fkey(handle)",
+      )
+      .eq("item_id", data.item_id)
+      .in("status", ["paid", "captured", "authorized"])
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    return ((rows as any[]) ?? []).map((r) => {
+      const mode = r.display_mode ?? "initials";
+      const handle = typeof r.x_handle === "string" ? r.x_handle.trim() : null;
+      const profileHandle = r.profiles?.handle ?? null;
+      const initials = (profileHandle?.[0] ?? "?").toUpperCase();
+      return {
+        id: r.id,
+        created_at: r.created_at,
+        amount_cents: Number(r.amount_cents ?? 0),
+        hide_amount: !!r.hide_amount,
+        display_mode: mode,
+        handle: mode === "handle" && handle ? handle : null,
+        initials: mode === "initials" ? initials : null,
+      };
+    });
   });
 
 
@@ -125,6 +158,45 @@ export const getMyPledges = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
     return data ?? [];
+  });
+
+const handleSchema = z
+  .string()
+  .max(15)
+  .regex(/^[a-zA-Z0-9_]*$/, "Only letters, numbers and underscores")
+  .transform((v) => v.replace(/^@/, "").trim())
+  .optional()
+  .or(z.literal("")
+);
+
+export const updatePledgeIdentity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        pledge_id: z.string().uuid(),
+        x_handle: handleSchema,
+        display_mode: z.enum(["handle", "initials", "anonymous"]),
+        hide_amount: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const handle = data.x_handle ? data.x_handle.replace(/^@/, "").trim() : null;
+    if (handle && (handle.length < 1 || handle.length > 15 || !/^[a-zA-Z0-9_]+$/.test(handle))) {
+      throw new Error("Invalid X handle");
+    }
+    const { error } = await context.supabase
+      .from("pledges")
+      .update({
+        x_handle: handle || null,
+        display_mode: data.display_mode,
+        hide_amount: data.hide_amount,
+      })
+      .eq("id", data.pledge_id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const createPledgeCheckout = createServerFn({ method: "POST" })
@@ -236,6 +308,7 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
     paid: boolean;
     amount_cents: number;
     member: boolean;
+    pledge_id?: string;
     error?: string;
   }> => {
     try {
@@ -279,7 +352,7 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
           );
         member = true;
       }
-      return { paid: true, amount_cents: amount, member };
+      return { paid: true, amount_cents: amount, member, pledge_id: meta.pledge_id };
     } catch (error) {
       return { paid: false, amount_cents: 0, member: false, error: getStripeErrorMessage(error) };
     }

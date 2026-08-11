@@ -5,11 +5,14 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from "@stripe/react-stripe-js";
-import { getItem, createPledgeCheckout, confirmPledgeSession } from "@/lib/board.functions";
+import { getItem, createPledgeCheckout, confirmPledgeSession, updatePledgeIdentity } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/hooks/useMembership";
+import { BackerList } from "@/components/fund/BackerList";
+import { PledgeIdentityForm } from "@/components/fund/PledgeIdentityForm";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/fund/$itemId")({
   loader: async ({ params }) => {
@@ -81,6 +84,7 @@ function ItemDetail() {
   const [signedIn, setSignedIn] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [pledgeId, setPledgeId] = useState<string | null>(null);
 
   const storageKey = `pledge_session_${itemId}`;
 
@@ -104,6 +108,7 @@ function ItemDetail() {
         if (res.paid) {
           window.localStorage.removeItem(storageKey);
           setPaidAmount(res.amount_cents);
+          setPledgeId(res.pledge_id ?? null);
           query.refetch();
         }
       })
@@ -210,21 +215,47 @@ function ItemDetail() {
         {(paidAmount !== null || justPledged) && (
           <div className="mt-6 rounded-md border border-[color:var(--badge-pass-fg)]/25 bg-[color:var(--badge-pass-bg)] p-5">
             <div className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--badge-pass-fg)]">
-              Payment successful — membership active
+              Contribution received — thank you
             </div>
+            <h2 className="mt-2 font-serif text-2xl tracking-tight text-[color:var(--badge-pass-fg)]">
+              {item.product_name}
+              {item.batch_id ? ` · batch ${item.batch_id}` : ""}
+            </h2>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
-              Thank you{paidAmount ? ` — your ${money(paidAmount)} contribution was received` : ""}.
-              It funds independent lab testing, and because you backed $5 or more you are now a
-              member: full test reports and campaign progress are unlocked for you. Membership is
-              $5/month — backing a pool keeps it active.
+              You contributed {paidAmount ? money(paidAmount) : money(amount)}. If this batch reaches
+              its {money(goal)} goal, it goes to an independent lab and results are published for
+              every backer. If the goal is not met by the deadline, your contribution rolls over to
+              the most-backed active campaign.
             </p>
-            <Link
-              to="/support"
-              className="mt-3 inline-block text-[11px] tracking-[0.18em] uppercase underline"
-            >
-              Manage membership
-            </Link>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link
+                to="/fund/$itemId/share"
+                params={{ itemId: item.id }}
+                className="inline-block rounded-sm bg-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-background"
+              >
+                Help this batch get tested — share
+              </Link>
+              <Link
+                to="/fund"
+                className="inline-block rounded-sm border border-[color:var(--badge-pass-fg)]/30 px-4 py-2.5 text-[11px] font-medium tracking-[0.22em] uppercase text-[color:var(--badge-pass-fg)]"
+              >
+                Back to campaigns
+              </Link>
+            </div>
+            {paidAmount && paidAmount >= 500 && (
+              <p className="mt-4 text-[11px] leading-relaxed text-[color:var(--badge-pass-fg)]">
+                Because you backed $5 or more, you are now a member: full test reports and campaign
+                progress are unlocked for you. Membership stays active while you back a pool.
+              </p>
+            )}
           </div>
+        )}
+
+        {(paidAmount !== null || justPledged) && signedIn && (
+          <PledgeIdentityForm
+            pledgeId={pledgeId ?? "placeholder"}
+            initial={{ display_mode: "initials", hide_amount: false }}
+          />
         )}
 
         {!fundable && !isMember && (
@@ -400,6 +431,10 @@ function ItemDetail() {
             </Link>
           </div>
         )}
+
+        <div className="mt-6">
+          <BackerList backers={(query.data?.backers as any) ?? []} />
+        </div>
 
         <div className="mt-10 rounded-sm border border-border bg-background p-4 text-xs leading-relaxed text-muted-foreground">
           This describes an independent test of a specific batch of a product. It is not a
