@@ -36,18 +36,21 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
     itemRows.map(async (it: any) => {
       const { data } = await (supabaseAdmin as any)
         .from("pledges")
-        .select("amount_cents, created_at, profiles:profiles!pledges_user_id_fkey(handle)")
+        .select("amount_cents, created_at, user_id")
         .eq("item_id", it.id)
         .in("status", ["paid", "authorized", "captured"])
         .order("created_at", { ascending: false })
         .limit(12);
-      backersByItem[it.id] = ((data as any[]) ?? []).map((r) => ({
+      const rows = (data as any[]) ?? [];
+      const handles = await fetchProfileHandles(rows.map((r) => r.user_id));
+      backersByItem[it.id] = rows.map((r) => ({
         amount_cents: r.amount_cents,
         created_at: r.created_at,
-        initial: (r.profiles?.handle?.[0] ?? "?").toUpperCase(),
+        initial: (handles[r.user_id]?.[0] ?? "?").toUpperCase(),
       }));
     }),
   );
+
   return {
     items: itemRows,
     totals,
