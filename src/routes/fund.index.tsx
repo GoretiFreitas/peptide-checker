@@ -718,6 +718,11 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
                 : "Sign in to contribute"}
             </button>
 
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Card and crypto (USDC) accepted.
+            </p>
+
+
             <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
               Contributions are charged immediately and always fund independent testing. If this batch doesn't reach its goal by the deadline, your contribution rolls over to the most-backed active campaign and you receive that campaign's results.
             </p>
