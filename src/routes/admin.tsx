@@ -150,6 +150,14 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
   if (!data) return null;
   const tx: any[] = data.transactions ?? [];
 
+  const methodLabel = (v: unknown) => {
+    const t = String(v ?? "").toLowerCase();
+    if (!t) return "—";
+    if (t === "card") return "card";
+    if (t.includes("crypto") || t.includes("stablecoin")) return "crypto (USDC)";
+    return t.replace(/_/g, " ");
+  };
+
   const exportCsv = () => {
     const header = [
       "created_at",
@@ -158,6 +166,7 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
       "amount_usd",
       "refunded_usd",
       "status",
+      "payment_method_type",
       "stripe_payment_intent_id",
       "rolled_over",
     ];
@@ -170,6 +179,7 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
         (r.amount_cents / 100).toFixed(2),
         (r.refunded_cents / 100).toFixed(2),
         r.status,
+        r.payment_method_type || "",
         r.stripe_payment_intent_id,
         r.rolled_over ? "yes" : "no",
       ]
