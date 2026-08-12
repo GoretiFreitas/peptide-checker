@@ -311,12 +311,30 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
           typeof session.payment_intent === "string"
             ? session.payment_intent
             : (session.payment_intent as { id?: string } | null)?.id ?? null;
+
+        // Record card vs crypto (USDC) for the audit trail.
+        let methodType: string | null = null;
+        if (paymentIntentId) {
+          try {
+            const piFull: any = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ["latest_charge"],
+            });
+            methodType =
+              piFull?.latest_charge?.payment_method_details?.type ??
+              piFull?.payment_method_types?.[0] ??
+              null;
+          } catch {
+            methodType = null;
+          }
+        }
+
         await admin
           .from("pledges")
           .update({
             status: "paid",
             stripe_payment_intent_id: paymentIntentId,
             backer_email: session.customer_details?.email ?? null,
+            payment_method_type: methodType,
             environment: data.environment,
           })
           .eq("id", meta.pledge_id)
