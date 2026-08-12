@@ -493,7 +493,11 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireAdmin(context.supabase, context.userId);
-    const sb: any = context.supabase;
+    // PII columns (backer_email, Stripe identifiers) are no longer readable by
+    // the Data API roles; read them with the server-only admin client after the
+    // admin role check above.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const sb: any = supabaseAdmin;
     const { data: rows } = await sb
       .from("pledges")
       .select(
