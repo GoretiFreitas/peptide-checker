@@ -28,7 +28,9 @@ export default defineTool({
     }
     const { data, error } = await supabaseForUser(ctx)
       .from("pledges")
-      .select("*, board_items(product_name, state)")
+      .select(
+        "id, item_id, amount_cents, status, environment, created_at, updated_at, x_handle, display_mode, hide_amount, board_items(product_name, state)",
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) {
