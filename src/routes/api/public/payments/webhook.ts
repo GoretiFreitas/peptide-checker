@@ -207,6 +207,7 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
       amount_cents: amount,
       net_cents: netCents,
       currency: full.currency ?? "usd",
+      payment_method_type: purchaseMethodType,
       status: "succeeded",
       environment: env,
       metadata: { session_metadata: session.metadata },
