@@ -292,6 +292,7 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
                 <th className="py-1">Campaign</th>
                 <th className="py-1 text-right">Amount</th>
                 <th className="py-1">Status</th>
+                <th className="py-1">Method</th>
                 <th className="py-1">Payment intent</th>
               </tr>
             </thead>
