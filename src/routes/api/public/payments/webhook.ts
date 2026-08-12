@@ -185,6 +185,10 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
   const charge = typeof pi === "object" ? pi?.latest_charge : null;
   const balanceTx: any = typeof charge === "object" ? charge?.balance_transaction : null;
   const netCents = typeof balanceTx === "object" ? Number(balanceTx?.net ?? 0) : null;
+  const purchaseMethodType: string | null =
+    (typeof charge === "object" ? (charge as any)?.payment_method_details?.type : null) ??
+    (typeof pi === "object" ? pi?.payment_method_types?.[0] : null) ??
+    null;
 
   const amount = Number(full.amount_total ?? 0);
   let kind: "donation" | "registry" | "other" = "other";
