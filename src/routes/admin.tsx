@@ -313,12 +313,13 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
                   </td>
                   <td className="py-1.5 text-right">{usd(r.amount_cents)}</td>
                   <td className="py-1.5">{r.status}</td>
+                  <td className="py-1.5">{methodLabel(r.payment_method_type)}</td>
                   <td className="py-1.5 font-mono text-xs">{r.stripe_payment_intent_id}</td>
                 </tr>
               ))}
               {tx.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-3 text-xs text-muted-foreground">
+                  <td colSpan={7} className="py-3 text-xs text-muted-foreground">
                     No transactions yet.
                   </td>
                 </tr>
