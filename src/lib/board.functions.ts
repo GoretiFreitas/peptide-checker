@@ -519,7 +519,7 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
     const { data: rows } = await sb
       .from("pledges")
       .select(
-        "id, item_id, user_id, backer_email, amount_cents, refunded_cents, status, created_at, stripe_payment_intent_id, rolled_over_from_item_id, board_items(product_name)",
+        "id, item_id, user_id, backer_email, amount_cents, refunded_cents, status, created_at, stripe_payment_intent_id, payment_method_type, rolled_over_from_item_id, board_items(product_name)",
       )
       .in("status", ["paid", "captured", "refunded"])
       .order("created_at", { ascending: false })
