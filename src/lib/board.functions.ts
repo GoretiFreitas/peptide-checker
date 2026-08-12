@@ -311,12 +311,30 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
           typeof session.payment_intent === "string"
             ? session.payment_intent
             : (session.payment_intent as { id?: string } | null)?.id ?? null;
+
+        // Record card vs crypto (USDC) for the audit trail.
+        let methodType: string | null = null;
+        if (paymentIntentId) {
+          try {
+            const piFull: any = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ["latest_charge"],
+            });
+            methodType =
+              piFull?.latest_charge?.payment_method_details?.type ??
+              piFull?.payment_method_types?.[0] ??
+              null;
+          } catch {
+            methodType = null;
+          }
+        }
+
         await admin
           .from("pledges")
           .update({
             status: "paid",
             stripe_payment_intent_id: paymentIntentId,
             backer_email: session.customer_details?.email ?? null,
+            payment_method_type: methodType,
             environment: data.environment,
           })
           .eq("id", meta.pledge_id)
@@ -501,7 +519,7 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
     const { data: rows } = await sb
       .from("pledges")
       .select(
-        "id, item_id, user_id, backer_email, amount_cents, refunded_cents, status, created_at, stripe_payment_intent_id, rolled_over_from_item_id, board_items(product_name)",
+        "id, item_id, user_id, backer_email, amount_cents, refunded_cents, status, created_at, stripe_payment_intent_id, payment_method_type, rolled_over_from_item_id, board_items(product_name)",
       )
       .in("status", ["paid", "captured", "refunded"])
       .order("created_at", { ascending: false })
@@ -559,6 +577,7 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
       refunded_cents: Number(r.refunded_cents ?? 0),
       status: r.status === "refunded" ? "refunded" : "paid",
       stripe_payment_intent_id: r.stripe_payment_intent_id ?? "",
+      payment_method_type: r.payment_method_type ?? "",
       rolled_over: !!r.rolled_over_from_item_id,
     }));
 

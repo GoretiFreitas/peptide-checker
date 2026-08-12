@@ -120,12 +120,31 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
     const admin = await getAdmin();
     const paymentIntentId =
       typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+
+    // Which payment method the backer used (card, crypto, ...) for the audit trail.
+    let methodType: string | null = null;
+    if (paymentIntentId) {
+      try {
+        const stripeForMethod = createStripeClient(stripeEnvKey);
+        const piFull: any = await stripeForMethod.paymentIntents.retrieve(paymentIntentId, {
+          expand: ["latest_charge"],
+        });
+        methodType =
+          piFull?.latest_charge?.payment_method_details?.type ??
+          piFull?.payment_method_types?.[0] ??
+          null;
+      } catch {
+        methodType = null;
+      }
+    }
+
     await admin
       .from("pledges")
       .update({
         status: "paid",
         stripe_payment_intent_id: paymentIntentId ?? null,
         backer_email: session.customer_details?.email ?? session.customer_email ?? null,
+        payment_method_type: methodType,
         environment: env,
       })
       .eq("id", pledgeId);
@@ -166,6 +185,10 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
   const charge = typeof pi === "object" ? pi?.latest_charge : null;
   const balanceTx: any = typeof charge === "object" ? charge?.balance_transaction : null;
   const netCents = typeof balanceTx === "object" ? Number(balanceTx?.net ?? 0) : null;
+  const purchaseMethodType: string | null =
+    (typeof charge === "object" ? (charge as any)?.payment_method_details?.type : null) ??
+    (typeof pi === "object" ? pi?.payment_method_types?.[0] : null) ??
+    null;
 
   const amount = Number(full.amount_total ?? 0);
   let kind: "donation" | "registry" | "other" = "other";
@@ -184,6 +207,7 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
       amount_cents: amount,
       net_cents: netCents,
       currency: full.currency ?? "usd",
+      payment_method_type: purchaseMethodType,
       status: "succeeded",
       environment: env,
       metadata: { session_metadata: session.metadata },

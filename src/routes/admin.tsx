@@ -150,6 +150,14 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
   if (!data) return null;
   const tx: any[] = data.transactions ?? [];
 
+  const methodLabel = (v: unknown) => {
+    const t = String(v ?? "").toLowerCase();
+    if (!t) return "—";
+    if (t === "card") return "card";
+    if (t.includes("crypto") || t.includes("stablecoin")) return "crypto (USDC)";
+    return t.replace(/_/g, " ");
+  };
+
   const exportCsv = () => {
     const header = [
       "created_at",
@@ -158,6 +166,7 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
       "amount_usd",
       "refunded_usd",
       "status",
+      "payment_method_type",
       "stripe_payment_intent_id",
       "rolled_over",
     ];
@@ -170,6 +179,7 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
         (r.amount_cents / 100).toFixed(2),
         (r.refunded_cents / 100).toFixed(2),
         r.status,
+        r.payment_method_type || "",
         r.stripe_payment_intent_id,
         r.rolled_over ? "yes" : "no",
       ]
@@ -282,6 +292,7 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
                 <th className="py-1">Campaign</th>
                 <th className="py-1 text-right">Amount</th>
                 <th className="py-1">Status</th>
+                <th className="py-1">Method</th>
                 <th className="py-1">Payment intent</th>
               </tr>
             </thead>
@@ -302,12 +313,13 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
                   </td>
                   <td className="py-1.5 text-right">{usd(r.amount_cents)}</td>
                   <td className="py-1.5">{r.status}</td>
+                  <td className="py-1.5">{methodLabel(r.payment_method_type)}</td>
                   <td className="py-1.5 font-mono text-xs">{r.stripe_payment_intent_id}</td>
                 </tr>
               ))}
               {tx.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-3 text-xs text-muted-foreground">
+                  <td colSpan={7} className="py-3 text-xs text-muted-foreground">
                     No transactions yet.
                   </td>
                 </tr>
@@ -315,6 +327,23 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          <span className="uppercase tracking-[0.14em]">Crypto payments —</span> contributions
+          paid with stablecoins (USDC) ride on Stripe Checkout's dynamic payment methods: the
+          customer is redirected to crypto.stripe.com to connect a wallet, and the funds settle
+          into the Stripe balance in USD like any card payment. Refunds on a crypto payment
+          settle back to a wallet and may arrive on a different token contract than the one used
+          to pay. See{" "}
+          <a
+            className="underline"
+            href="https://docs.stripe.com/crypto/stablecoin-payments/refunds"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Stripe's refund documentation
+          </a>
+          .
+        </p>
       </div>
     </section>
   );

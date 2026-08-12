@@ -407,6 +407,9 @@ function ItemDetail() {
                 >
                   {pledge.isPending ? "…" : signedIn ? `Contribute ${money(amount)}` : "Sign in to contribute"}
                 </button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Card and crypto (USDC) accepted.
+                </p>
               </>
             )}
             {clientSecret && (

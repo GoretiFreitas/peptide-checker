@@ -268,6 +268,8 @@ function SupportPage() {
           </div>
         )}
 
+        <p className="mt-4 text-xs text-muted-foreground">Card and crypto (USDC) accepted.</p>
+
         {error && <p className="mt-6 text-sm text-red-700">{error}</p>}
 
         {userId && purchasesQ.data && "purchases" in purchasesQ.data && purchasesQ.data.purchases.length > 0 && (
