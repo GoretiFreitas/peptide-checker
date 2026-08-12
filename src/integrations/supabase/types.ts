@@ -218,6 +218,7 @@ export type Database = {
           hide_amount: boolean
           id: string
           item_id: string
+          payment_method_type: string | null
           refunded_cents: number
           rolled_over_at: string | null
           rolled_over_from_item_id: string | null
@@ -237,6 +238,7 @@ export type Database = {
           hide_amount?: boolean
           id?: string
           item_id: string
+          payment_method_type?: string | null
           refunded_cents?: number
           rolled_over_at?: string | null
           rolled_over_from_item_id?: string | null
@@ -256,6 +258,7 @@ export type Database = {
           hide_amount?: boolean
           id?: string
           item_id?: string
+          payment_method_type?: string | null
           refunded_cents?: number
           rolled_over_at?: string | null
           rolled_over_from_item_id?: string | null
@@ -313,6 +316,7 @@ export type Database = {
           kind: string
           metadata: Json | null
           net_cents: number | null
+          payment_method_type: string | null
           price_id: string | null
           product_id: string
           refunded_cents: number
@@ -334,6 +338,7 @@ export type Database = {
           kind: string
           metadata?: Json | null
           net_cents?: number | null
+          payment_method_type?: string | null
           price_id?: string | null
           product_id: string
           refunded_cents?: number
@@ -355,6 +360,7 @@ export type Database = {
           kind?: string
           metadata?: Json | null
           net_cents?: number | null
+          payment_method_type?: string | null
           price_id?: string | null
           product_id?: string
           refunded_cents?: number
