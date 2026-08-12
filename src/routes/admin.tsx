@@ -327,6 +327,23 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          <span className="uppercase tracking-[0.14em]">Crypto payments —</span> contributions
+          paid with stablecoins (USDC) ride on Stripe Checkout's dynamic payment methods: the
+          customer is redirected to crypto.stripe.com to connect a wallet, and the funds settle
+          into the Stripe balance in USD like any card payment. Refunds on a crypto payment
+          settle back to a wallet and may arrive on a different token contract than the one used
+          to pay. See{" "}
+          <a
+            className="underline"
+            href="https://docs.stripe.com/crypto/stablecoin-payments/refunds"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Stripe's refund documentation
+          </a>
+          .
+        </p>
       </div>
     </section>
   );
