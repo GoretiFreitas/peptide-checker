@@ -577,6 +577,7 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
       refunded_cents: Number(r.refunded_cents ?? 0),
       status: r.status === "refunded" ? "refunded" : "paid",
       stripe_payment_intent_id: r.stripe_payment_intent_id ?? "",
+      payment_method_type: r.payment_method_type ?? "",
       rolled_over: !!r.rolled_over_from_item_id,
     }));
 
