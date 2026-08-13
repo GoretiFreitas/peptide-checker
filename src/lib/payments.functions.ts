@@ -84,7 +84,10 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
           ? { subscription_data: { metadata: { userId } } }
           : { payment_intent_data: { description: productName } }),
         metadata: { userId, kind: isRecurring ? "subscription" : "one_time" },
+        // Crypto (USDC) requires a USD-presented amount; disable currency conversion.
+        adaptive_pricing: { enabled: false },
       };
+
       // Full compliance handling (tax + fraud + disputes + support).
       // Not part of the pinned SDK type — cast to satisfy TS.
       (params as Record<string, unknown>).managed_payments = { enabled: true };
