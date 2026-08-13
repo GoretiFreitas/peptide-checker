@@ -255,7 +255,10 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
           item_id: item.id,
           user_id: context.userId,
         },
+        // Crypto (USDC) requires a USD-presented amount; disable currency conversion.
+        adaptive_pricing: { enabled: false },
         ...(user?.email && { customer_email: user.email }),
+
       });
 
       // Store checkout session id
