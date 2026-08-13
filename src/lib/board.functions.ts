@@ -222,7 +222,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
           environment: data.environment,
           backer_email: user?.email ?? null,
         })
-        .select()
+        .select("id")
         .single();
       if (insertErr || !pledge) return { error: insertErr?.message ?? "Could not create contribution" };
 
