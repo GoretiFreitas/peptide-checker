@@ -2,11 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type Stripe from "stripe";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  type StripeEnv,
-  createStripeClient,
-  getStripeErrorMessage,
-} from "@/lib/stripe.server";
+import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 
 const envSchema = z.enum(["sandbox", "live"]);
 
@@ -58,7 +54,10 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ clientSecret: string } | { error: string }> => {
     try {
       const stripe = createStripeClient(data.environment);
-      const prices = await stripe.prices.list({ lookup_keys: [data.priceId], expand: ["data.product"] });
+      const prices = await stripe.prices.list({
+        lookup_keys: [data.priceId],
+        expand: ["data.product"],
+      });
       if (!prices.data.length) throw new Error("Price not found");
       const price = prices.data[0];
       const isRecurring = price.type === "recurring";
@@ -69,9 +68,10 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
 
       const customerId = await resolveOrCreateCustomer(stripe, { email, userId });
 
-      const product = typeof price.product === "string"
-        ? await stripe.products.retrieve(price.product)
-        : price.product;
+      const product =
+        typeof price.product === "string"
+          ? await stripe.products.retrieve(price.product)
+          : price.product;
       const productName = (product as { name?: string }).name ?? "Purchase";
 
       const params: Stripe.Checkout.SessionCreateParams = {
@@ -104,9 +104,7 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
 /** Open the Stripe customer portal for managing subscriptions / cancelling. */
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ returnUrl: z.string().url(), environment: envSchema }).parse(d),
-  )
+  .inputValidator((d) => z.object({ returnUrl: z.string().url(), environment: envSchema }).parse(d))
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
     try {
       const { supabase, userId } = context;
@@ -192,10 +190,7 @@ export const getFullReport = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ itemId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const has = new Set((roles ?? []).map((r: { role: string }) => r.role));
     if (!has.has("registry_member") && !has.has("admin")) {
       return { error: "Registry access required" as const };

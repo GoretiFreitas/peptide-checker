@@ -3,26 +3,17 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import {
-  type StripeEnv,
-  createStripeClient,
-  getStripeErrorMessage,
-} from "@/lib/stripe.server";
+import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { computeFundingTotals } from "@/lib/board-totals.server";
 import { fetchProfileHandles, listCampaignBackers } from "@/lib/profiles.server";
 
-
-
 function publicSupabase() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 // ---------------- Public reads ----------------
-
 
 export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicSupabase();
@@ -33,7 +24,10 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
   const itemRows = items.data ?? [];
   // Fetch anonymized backer strip using admin client (bypasses RLS) — anonymized fields only.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const backersByItem: Record<string, Array<{ amount_cents: number; created_at: string; initial: string }>> = {};
+  const backersByItem: Record<
+    string,
+    Array<{ amount_cents: number; created_at: string; initial: string }>
+  > = {};
   await Promise.all(
     itemRows.map(async (it: any) => {
       const { data } = await (supabaseAdmin as any)
@@ -60,7 +54,6 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
   };
 });
 
-
 export const getItem = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
@@ -84,8 +77,6 @@ export const getItem = createServerFn({ method: "POST" })
 export const getCampaignBackers = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ item_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => listCampaignBackers(data.item_id));
-
-
 
 export const getFundTotal = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicSupabase();
@@ -147,8 +138,7 @@ const handleSchema = z
   .regex(/^[a-zA-Z0-9_]*$/, "Only letters, numbers and underscores")
   .transform((v) => v.replace(/^@/, "").trim())
   .optional()
-  .or(z.literal("")
-);
+  .or(z.literal(""));
 
 export const updatePledgeIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -196,8 +186,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ clientSecret: string } | { error: string }> => {
     try {
       // Verify item is in a fundable state
-      const { data: item } = await (context.supabase
-        .from("board_items") as any)
+      const { data: item } = await (context.supabase.from("board_items") as any)
         .select("id, state, product_name, us_only, lab")
         .eq("id", data.item_id)
         .maybeSingle();
@@ -209,11 +198,12 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         return { error: "This campaign requires a US-shipping confirmation." };
       }
 
-      const { data: { user } } = await context.supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await context.supabase.auth.getUser();
 
       // Insert pending contribution (becomes `paid` on the verified webhook)
-      const { data: pledge, error: insertErr } = await (context.supabase
-        .from("pledges") as any)
+      const { data: pledge, error: insertErr } = await (context.supabase.from("pledges") as any)
         .insert({
           item_id: data.item_id,
           user_id: context.userId,
@@ -224,7 +214,8 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         })
         .select("id")
         .single();
-      if (insertErr || !pledge) return { error: insertErr?.message ?? "Could not create contribution" };
+      if (insertErr || !pledge)
+        return { error: insertErr?.message ?? "Could not create contribution" };
 
       const stripe = createStripeClient(data.environment as StripeEnv);
 
@@ -258,7 +249,6 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         // Crypto (USDC) requires a USD-presented amount; disable currency conversion.
         adaptive_pricing: { enabled: false },
         ...(user?.email && { customer_email: user.email }),
-
       });
 
       // Store checkout session id
@@ -288,78 +278,82 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<{
-    paid: boolean;
-    amount_cents: number;
-    member: boolean;
-    pledge_id?: string;
-    error?: string;
-  }> => {
-    try {
-      const stripe = createStripeClient(data.environment as StripeEnv);
-      const session = await stripe.checkout.sessions.retrieve(data.session_id);
-      const meta = (session.metadata ?? {}) as Record<string, string>;
-      if (meta.user_id !== context.userId) {
-        return { paid: false, amount_cents: 0, member: false, error: "Not found" };
-      }
-      if (session.payment_status === "unpaid") {
-        return { paid: false, amount_cents: 0, member: false };
-      }
-      const amount = Number(session.amount_total ?? 0);
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const admin = supabaseAdmin as any;
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      paid: boolean;
+      amount_cents: number;
+      member: boolean;
+      pledge_id?: string;
+      error?: string;
+    }> => {
+      try {
+        const stripe = createStripeClient(data.environment as StripeEnv);
+        const session = await stripe.checkout.sessions.retrieve(data.session_id);
+        const meta = (session.metadata ?? {}) as Record<string, string>;
+        if (meta.user_id !== context.userId) {
+          return { paid: false, amount_cents: 0, member: false, error: "Not found" };
+        }
+        if (session.payment_status === "unpaid") {
+          return { paid: false, amount_cents: 0, member: false };
+        }
+        const amount = Number(session.amount_total ?? 0);
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const admin = supabaseAdmin as any;
 
-      if (meta.pledge_id) {
-        const paymentIntentId =
-          typeof session.payment_intent === "string"
-            ? session.payment_intent
-            : (session.payment_intent as { id?: string } | null)?.id ?? null;
+        if (meta.pledge_id) {
+          const paymentIntentId =
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : ((session.payment_intent as { id?: string } | null)?.id ?? null);
 
-        // Record card vs crypto (USDC) for the audit trail.
-        let methodType: string | null = null;
-        if (paymentIntentId) {
-          try {
-            const piFull: any = await stripe.paymentIntents.retrieve(paymentIntentId, {
-              expand: ["latest_charge"],
-            });
-            methodType =
-              piFull?.latest_charge?.payment_method_details?.type ??
-              piFull?.payment_method_types?.[0] ??
-              null;
-          } catch {
-            methodType = null;
+          // Record card vs crypto (USDC) for the audit trail.
+          let methodType: string | null = null;
+          if (paymentIntentId) {
+            try {
+              const piFull: any = await stripe.paymentIntents.retrieve(paymentIntentId, {
+                expand: ["latest_charge"],
+              });
+              methodType =
+                piFull?.latest_charge?.payment_method_details?.type ??
+                piFull?.payment_method_types?.[0] ??
+                null;
+            } catch {
+              methodType = null;
+            }
           }
+
+          await admin
+            .from("pledges")
+            .update({
+              status: "paid",
+              stripe_payment_intent_id: paymentIntentId,
+              backer_email: session.customer_details?.email ?? null,
+              payment_method_type: methodType,
+              environment: data.environment,
+            })
+            .eq("id", meta.pledge_id)
+            .neq("status", "refunded");
         }
 
-        await admin
-          .from("pledges")
-          .update({
-            status: "paid",
-            stripe_payment_intent_id: paymentIntentId,
-            backer_email: session.customer_details?.email ?? null,
-            payment_method_type: methodType,
-            environment: data.environment,
-          })
-          .eq("id", meta.pledge_id)
-          .neq("status", "refunded");
+        let member = false;
+        if (amount >= 500) {
+          await admin
+            .from("user_roles")
+            .upsert(
+              { user_id: context.userId, role: "supporter" },
+              { onConflict: "user_id,role", ignoreDuplicates: true },
+            );
+          member = true;
+        }
+        return { paid: true, amount_cents: amount, member, pledge_id: meta.pledge_id };
+      } catch (error) {
+        return { paid: false, amount_cents: 0, member: false, error: getStripeErrorMessage(error) };
       }
-
-      let member = false;
-      if (amount >= 500) {
-        await admin
-          .from("user_roles")
-          .upsert(
-            { user_id: context.userId, role: "supporter" },
-            { onConflict: "user_id,role", ignoreDuplicates: true },
-          );
-        member = true;
-      }
-      return { paid: true, amount_cents: amount, member, pledge_id: meta.pledge_id };
-    } catch (error) {
-      return { paid: false, amount_cents: 0, member: false, error: getStripeErrorMessage(error) };
-    }
-  });
-
+    },
+  );
 
 // ---------------- Admin actions ----------------
 
@@ -403,7 +397,9 @@ export const adminSetItem = createServerFn({ method: "POST" })
     ] as const) {
       if (data[k] !== undefined) patch[k] = data[k];
     }
-    const { error } = await (context.supabase.from("board_items") as any).update(patch).eq("id", data.id);
+    const { error } = await (context.supabase.from("board_items") as any)
+      .update(patch)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -457,13 +453,11 @@ export const adminCloseCampaign = createServerFn({ method: "POST" })
     const totals = await computeFundingTotals();
     const totalsById = new Map(
       (totals ?? []).map((t) => [t.item_id, Number(t.pledged_cents ?? 0)]),
-
     );
     const target = (candidates ?? [])
       .slice()
       .sort(
-        (a: any, b: any) =>
-          Number(totalsById.get(b.id) ?? 0) - Number(totalsById.get(a.id) ?? 0),
+        (a: any, b: any) => Number(totalsById.get(b.id) ?? 0) - Number(totalsById.get(a.id) ?? 0),
       )[0];
 
     if (!target) {
@@ -532,9 +526,7 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
     const paid = list.filter((r) => r.status !== "refunded");
     const grossCents = paid.reduce((s, r) => s + Number(r.amount_cents ?? 0), 0);
     const refundedCents = list.reduce((s, r) => s + Number(r.refunded_cents ?? 0), 0);
-    const uniqueBackers = new Set(
-      paid.map((r) => r.user_id ?? r.backer_email ?? r.id),
-    ).size;
+    const uniqueBackers = new Set(paid.map((r) => r.user_id ?? r.backer_email ?? r.id)).size;
 
     const perCampaign = new Map<string, any>();
     for (const r of paid) {
@@ -596,7 +588,6 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
     };
   });
 
-
 export const adminPublishResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -626,7 +617,10 @@ export const adminPublishResult = createServerFn({ method: "POST" })
       { onConflict: "item_id" },
     );
     if (error) throw new Error(error.message);
-    await context.supabase.from("board_items").update({ state: "published" }).eq("id", data.item_id);
+    await context.supabase
+      .from("board_items")
+      .update({ state: "published" })
+      .eq("id", data.item_id);
     return { ok: true };
   });
 

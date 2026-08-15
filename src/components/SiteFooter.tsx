@@ -10,7 +10,8 @@ export function SiteFooter() {
               PeptidesCheck<span className="text-muted-foreground">.</span>
             </div>
             <p className="mt-3 max-w-[32ch] text-xs leading-relaxed text-muted-foreground">
-              Independent and community-supported. Certificate review and authenticity, plus a community fund that funds independent laboratory testing.
+              Independent and community-supported. Certificate review and authenticity, plus a
+              community fund that funds independent laboratory testing.
             </p>
           </div>
 
@@ -25,7 +26,11 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/verify" search={{}} className="text-foreground hover:text-muted-foreground">
+                <Link
+                  to="/verify"
+                  search={{}}
+                  className="text-foreground hover:text-muted-foreground"
+                >
                   Verify a batch
                 </Link>
               </li>
@@ -35,7 +40,11 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/support" search={{}} className="text-foreground hover:text-muted-foreground">
+                <Link
+                  to="/support"
+                  search={{}}
+                  className="text-foreground hover:text-muted-foreground"
+                >
                   Support the work
                 </Link>
               </li>
@@ -97,9 +106,9 @@ export function SiteFooter() {
 
         <div className="mt-10 border-t border-border pt-6">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            <span className="font-medium text-foreground">Disclaimer.</span> All results, analyses, and
-            certificates shown on this site are provided for molecular-biology-grade research use
-            only. Nothing here is a medical claim, a statement of safety for human or animal
+            <span className="font-medium text-foreground">Disclaimer.</span> All results, analyses,
+            and certificates shown on this site are provided for molecular-biology-grade research
+            use only. Nothing here is a medical claim, a statement of safety for human or animal
             consumption, or an approval by any regulator. Not for diagnostic or therapeutic use.
           </p>
           <p className="mt-4 text-[11px] tracking-[0.14em] uppercase text-muted-foreground">

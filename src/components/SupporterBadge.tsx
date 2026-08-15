@@ -1,4 +1,8 @@
-export function SupporterBadge({ variant }: { variant: "supporter" | "registry_member" | "admin" }) {
+export function SupporterBadge({
+  variant,
+}: {
+  variant: "supporter" | "registry_member" | "admin";
+}) {
   const label =
     variant === "supporter" ? "Supporter" : variant === "registry_member" ? "Registry" : "Admin";
   const styles: Record<typeof variant, string> = {

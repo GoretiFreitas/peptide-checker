@@ -103,7 +103,6 @@ export const extractCertificate = createServerFn({ method: "POST" })
       });
       return output;
     } catch (error) {
-
       if (NoObjectGeneratedError.isInstance(error)) {
         console.error("Structured extraction failed:", error.text);
         try {

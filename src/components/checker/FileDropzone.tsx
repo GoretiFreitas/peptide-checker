@@ -48,16 +48,16 @@ export function FileDropzone({ file, onFile, disabled }: Props) {
         }}
         onClick={() => !disabled && inputRef.current?.click()}
         className={`flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-md border border-dashed p-6 text-center transition-colors ${
-          dragOver ? "border-foreground/40 bg-card" : "border-border bg-card/50 hover:border-foreground/30"
+          dragOver
+            ? "border-foreground/40 bg-card"
+            : "border-border bg-card/50 hover:border-foreground/30"
         } ${disabled ? "pointer-events-none opacity-60" : ""}`}
       >
         {file ? (
           <div className="flex flex-col items-center gap-2">
             <FileText className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
             <div className="text-sm text-foreground">{file.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {(file.size / 1024).toFixed(0)} KB
-            </div>
+            <div className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</div>
             <button
               type="button"
               onClick={(e) => {

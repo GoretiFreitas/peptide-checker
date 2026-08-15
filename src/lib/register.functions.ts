@@ -4,11 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 function publicSupabase() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 const hashRe = /^[a-f0-9]{64}$/i;
@@ -102,7 +100,6 @@ export const lookupRegister = createServerFn({ method: "POST" })
 
     const matches = rows ?? [];
     if (matches.length === 0) return { result: "not_found" as const, entry: null, matches: [] };
-    if (matches.length === 1)
-      return { result: "registered" as const, entry: matches[0], matches };
+    if (matches.length === 1) return { result: "registered" as const, entry: matches[0], matches };
     return { result: "conflict" as const, entry: matches[0], matches };
   });

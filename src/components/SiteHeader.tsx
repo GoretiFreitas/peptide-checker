@@ -32,16 +32,33 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-4 md:px-10">
-        <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2 font-serif text-lg tracking-tight text-foreground sm:text-xl">
+        <Link
+          to="/"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-2 font-serif text-lg tracking-tight text-foreground sm:text-xl"
+        >
           <img src={logoAsset.url} alt="PeptidesCheck" className="h-7 w-auto sm:h-8" />
           PeptidesCheck.
         </Link>
 
         <nav className="hidden items-center gap-6 text-[11px] font-medium tracking-[0.18em] uppercase md:flex">
-          <Link to="/" className={linkClass} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
-          <Link to="/verify" search={{}} className={linkClass} activeProps={activeProps}>Verify</Link>
-          <Link to="/fund" className={linkClass} activeProps={activeProps}>Fund</Link>
-          <Link to="/support" search={{}} className={linkClass} activeProps={activeProps}>Support</Link>
+          <Link
+            to="/"
+            className={linkClass}
+            activeOptions={{ exact: true }}
+            activeProps={activeProps}
+          >
+            Checker
+          </Link>
+          <Link to="/verify" search={{}} className={linkClass} activeProps={activeProps}>
+            Verify
+          </Link>
+          <Link to="/fund" className={linkClass} activeProps={activeProps}>
+            Fund
+          </Link>
+          <Link to="/support" search={{}} className={linkClass} activeProps={activeProps}>
+            Support
+          </Link>
           {email && (
             <span className="flex items-center gap-1.5">
               {isAdmin && <SupporterBadge variant="admin" />}
@@ -50,9 +67,13 @@ export function SiteHeader() {
             </span>
           )}
           {email ? (
-            <button onClick={() => supabase.auth.signOut()} className={linkClass}>Sign out</button>
+            <button onClick={() => supabase.auth.signOut()} className={linkClass}>
+              Sign out
+            </button>
           ) : (
-            <Link to="/auth" search={{}} className={linkClass}>Sign in</Link>
+            <Link to="/auth" search={{}} className={linkClass}>
+              Sign in
+            </Link>
           )}
         </nav>
 
@@ -70,14 +91,60 @@ export function SiteHeader() {
       {open && (
         <nav className="md:hidden border-t border-border bg-background">
           <div className="mx-auto flex max-w-[1400px] flex-col gap-1 px-6 py-4 text-[11px] font-medium tracking-[0.18em] uppercase">
-            <Link to="/" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeOptions={{ exact: true }} activeProps={activeProps}>Checker</Link>
-            <Link to="/verify" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Verify</Link>
-            <Link to="/fund" onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Fund</Link>
-            <Link to="/support" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`} activeProps={activeProps}>Support</Link>
+            <Link
+              to="/"
+              onClick={() => setOpen(false)}
+              className={`${linkClass} py-2`}
+              activeOptions={{ exact: true }}
+              activeProps={activeProps}
+            >
+              Checker
+            </Link>
+            <Link
+              to="/verify"
+              search={{}}
+              onClick={() => setOpen(false)}
+              className={`${linkClass} py-2`}
+              activeProps={activeProps}
+            >
+              Verify
+            </Link>
+            <Link
+              to="/fund"
+              onClick={() => setOpen(false)}
+              className={`${linkClass} py-2`}
+              activeProps={activeProps}
+            >
+              Fund
+            </Link>
+            <Link
+              to="/support"
+              search={{}}
+              onClick={() => setOpen(false)}
+              className={`${linkClass} py-2`}
+              activeProps={activeProps}
+            >
+              Support
+            </Link>
             {email ? (
-              <button onClick={() => { setOpen(false); supabase.auth.signOut(); }} className={`${linkClass} py-2 text-left`}>Sign out</button>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  supabase.auth.signOut();
+                }}
+                className={`${linkClass} py-2 text-left`}
+              >
+                Sign out
+              </button>
             ) : (
-              <Link to="/auth" search={{}} onClick={() => setOpen(false)} className={`${linkClass} py-2`}>Sign in</Link>
+              <Link
+                to="/auth"
+                search={{}}
+                onClick={() => setOpen(false)}
+                className={`${linkClass} py-2`}
+              >
+                Sign in
+              </Link>
             )}
           </div>
         </nav>

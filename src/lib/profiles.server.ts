@@ -20,12 +20,9 @@ export async function fetchProfileHandles(
 ): Promise<Record<string, string | null>> {
   const ids = Array.from(new Set(userIds.filter((id): id is string => !!id)));
   if (ids.length === 0) return {};
-  const { data } = await (supabaseAdmin as any)
-    .from("profiles")
-    .select("id, handle")
-    .in("id", ids);
+  const { data } = await (supabaseAdmin as any).from("profiles").select("id, handle").in("id", ids);
   const map: Record<string, string | null> = {};
-  for (const row of ((data as any[]) ?? [])) map[row.id] = row.handle ?? null;
+  for (const row of (data as any[]) ?? []) map[row.id] = row.handle ?? null;
   return map;
 }
 
@@ -39,7 +36,7 @@ export async function listCampaignBackers(itemId: string): Promise<CampaignBacke
     .limit(500);
   if (error) console.error("[backers] query failed", error.message);
 
-  const list = ((rows as any[]) ?? []);
+  const list = (rows as any[]) ?? [];
   const handles = await fetchProfileHandles(list.map((r) => r.user_id));
 
   return list.map((r) => {

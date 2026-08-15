@@ -44,7 +44,10 @@ export function PledgeIdentityForm({
   });
 
   const handleInput = (value: string) => {
-    const stripped = value.replace(/^@/, "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 15);
+    const stripped = value
+      .replace(/^@/, "")
+      .replace(/[^a-zA-Z0-9_]/g, "")
+      .slice(0, 15);
     setHandle(stripped);
   };
 

@@ -9,10 +9,9 @@ async function getAdmin() {
 // ------- Entitlement helpers -------
 
 async function grantRole(admin: any, userId: string, role: "supporter" | "registry_member") {
-  await admin.from("user_roles").upsert(
-    { user_id: userId, role },
-    { onConflict: "user_id,role", ignoreDuplicates: true },
-  );
+  await admin
+    .from("user_roles")
+    .upsert({ user_id: userId, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
 }
 async function revokeRole(admin: any, userId: string, role: "supporter" | "registry_member") {
   await admin.from("user_roles").delete().eq("user_id", userId).eq("role", role);
@@ -37,7 +36,9 @@ async function creditFund(admin: any, deltaCents: number, note: string, meta: an
 // ------- Subscription handlers -------
 
 function priceLookup(item: any): string | null {
-  return item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
+  return (
+    item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null
+  );
 }
 
 async function upsertSubscription(subscription: any, env: StripeEnv) {
@@ -49,9 +50,8 @@ async function upsertSubscription(subscription: any, env: StripeEnv) {
   }
   const item = subscription.items?.data?.[0];
   const priceId = priceLookup(item);
-  const productId = typeof item?.price?.product === "string"
-    ? item.price.product
-    : item?.price?.product?.id;
+  const productId =
+    typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id;
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
@@ -112,14 +112,20 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 
 // ------- One-time purchase handling (donations, registry) -------
 
-async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stripeEnvKey: StripeEnv) {
+async function handleCheckoutSessionCompleted(
+  session: any,
+  env: StripeEnv,
+  stripeEnvKey: StripeEnv,
+) {
   // Fund contributions live under board.functions and use `metadata.pledge_id`.
   const pledgeId = session.metadata?.pledge_id;
   if (pledgeId) {
     if (session.payment_status === "unpaid") return;
     const admin = await getAdmin();
     const paymentIntentId =
-      typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id;
 
     // Which payment method the backer used (card, crypto, ...) for the audit trail.
     let methodType: string | null = null;
@@ -163,7 +169,6 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
     return;
   }
 
-
   // Subscription checkouts: the subscription.created event will handle entitlement.
   if (session.mode !== "payment") return;
 
@@ -177,8 +182,10 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
   });
   const line = full.line_items?.data?.[0];
   const priceObj: any = line?.price;
-  const priceLookupKey = priceObj?.lookup_key || priceObj?.metadata?.lovable_external_id || priceObj?.id || null;
-  const productId = typeof priceObj?.product === "string" ? priceObj.product : priceObj?.product?.id;
+  const priceLookupKey =
+    priceObj?.lookup_key || priceObj?.metadata?.lovable_external_id || priceObj?.id || null;
+  const productId =
+    typeof priceObj?.product === "string" ? priceObj.product : priceObj?.product?.id;
 
   const pi: any = full.payment_intent;
   const paymentIntentId = typeof pi === "string" ? pi : pi?.id;
@@ -192,15 +199,22 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
 
   const amount = Number(full.amount_total ?? 0);
   let kind: "donation" | "registry" | "other" = "other";
-  if (productId === "community_donation" || String(priceLookupKey).startsWith("donate_")) kind = "donation";
-  else if (productId === "registry_access" || priceLookupKey === "registry_full_500" || priceLookupKey === "registry_lifetime") kind = "registry";
+  if (productId === "community_donation" || String(priceLookupKey).startsWith("donate_"))
+    kind = "donation";
+  else if (
+    productId === "registry_access" ||
+    priceLookupKey === "registry_full_500" ||
+    priceLookupKey === "registry_lifetime"
+  )
+    kind = "registry";
 
   await admin.from("purchases").upsert(
     {
       user_id: userId ?? null,
       stripe_checkout_session_id: session.id,
       stripe_payment_intent_id: paymentIntentId ?? null,
-      stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id,
+      stripe_customer_id:
+        typeof session.customer === "string" ? session.customer : session.customer?.id,
       product_id: productId ?? "unknown",
       price_id: priceLookupKey,
       kind,
@@ -238,7 +252,8 @@ async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stri
 
 async function handleChargeRefunded(charge: any, env: StripeEnv) {
   const admin = await getAdmin();
-  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const pi =
+    typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
   if (!pi) return;
   const refunded = Number(charge.amount_refunded ?? 0);
   const total = Number(charge.amount ?? 0);
@@ -254,8 +269,6 @@ async function handleChargeRefunded(charge: any, env: StripeEnv) {
     })
     .eq("stripe_payment_intent_id", pi)
     .eq("environment", env);
-
-
 
   const { data: purchase } = await admin
     .from("purchases")
@@ -304,7 +317,9 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
     typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
   if (!subscriptionId) return; // one-off invoices handled via checkout.session.completed
   const paymentIntentId =
-    typeof invoice.payment_intent === "string" ? invoice.payment_intent : invoice.payment_intent?.id;
+    typeof invoice.payment_intent === "string"
+      ? invoice.payment_intent
+      : invoice.payment_intent?.id;
   if (!paymentIntentId) return;
 
   const admin = await getAdmin();
@@ -325,7 +340,10 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
 
   const item = sub.items?.data?.[0];
   const priceLookup =
-    item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
+    item?.price?.lookup_key ||
+    item?.price?.metadata?.lovable_external_id ||
+    item?.price?.id ||
+    null;
   const productId =
     typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id;
 
@@ -338,7 +356,8 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
       user_id: userId,
       stripe_payment_intent_id: paymentIntentId,
       stripe_checkout_session_id: null,
-      stripe_customer_id: typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id,
+      stripe_customer_id:
+        typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id,
       product_id: productId ?? "supporter_membership",
       price_id: priceLookup,
       kind: "subscription_charge",
@@ -410,7 +429,6 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
         .eq("id", pledgeId);
       break;
   }
-
 }
 
 // ------- Dispatcher -------

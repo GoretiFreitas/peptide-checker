@@ -127,11 +127,7 @@ function endotoxinExceedsLimit(e: ExtractedCertificate): boolean {
   return false;
 }
 
-export function computeVerdict(
-  e: ExtractedCertificate,
-  f: FieldResults,
-  flags: Flag[],
-): Verdict {
+export function computeVerdict(e: ExtractedCertificate, f: FieldResults, flags: Flag[]): Verdict {
   const reportedCount = [
     isReported(e.productName),
     isReported(e.identity.result),
@@ -149,7 +145,10 @@ export function computeVerdict(
   const hasHighOrMedium = flags.some((fl) => fl.level === "high" || fl.level === "medium");
   if (hasHighOrMedium) return "Document review — concerns";
 
-  if (f.identity === "pass" && (f.purity === "pass (premium)" || f.purity === "pass (research grade)")) {
+  if (
+    f.identity === "pass" &&
+    (f.purity === "pass (premium)" || f.purity === "pass (research grade)")
+  ) {
     return "Document review — consistent";
   }
 

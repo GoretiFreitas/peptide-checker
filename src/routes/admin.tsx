@@ -118,7 +118,6 @@ function AdminPage() {
 
         <MetricsPanel data={metrics.data} loading={metrics.isLoading} />
 
-
         <div className="mt-8 space-y-6">
           {items.map((item: any) => (
             <AdminRow
@@ -143,9 +142,7 @@ function usd(cents: number) {
 
 function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
   if (loading) {
-    return (
-      <div className="mt-6 h-40 animate-pulse rounded-sm border border-border bg-card" />
-    );
+    return <div className="mt-6 h-40 animate-pulse rounded-sm border border-border bg-card" />;
   }
   if (!data) return null;
   const tx: any[] = data.transactions ?? [];
@@ -328,12 +325,11 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
           </table>
         </div>
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          <span className="uppercase tracking-[0.14em]">Crypto payments —</span> contributions
-          paid with stablecoins (USDC) ride on Stripe Checkout's dynamic payment methods: the
-          customer is redirected to crypto.stripe.com to connect a wallet, and the funds settle
-          into the Stripe balance in USD like any card payment. Refunds on a crypto payment
-          settle back to a wallet and may arrive on a different token contract than the one used
-          to pay. See{" "}
+          <span className="uppercase tracking-[0.14em]">Crypto payments —</span> contributions paid
+          with stablecoins (USDC) ride on Stripe Checkout's dynamic payment methods: the customer is
+          redirected to crypto.stripe.com to connect a wallet, and the funds settle into the Stripe
+          balance in USD like any card payment. Refunds on a crypto payment settle back to a wallet
+          and may arrive on a different token contract than the one used to pay. See{" "}
           <a
             className="underline"
             href="https://docs.stripe.com/crypto/stablecoin-payments/refunds"
@@ -350,7 +346,6 @@ function MetricsPanel({ data, loading }: { data: any; loading: boolean }) {
 }
 
 function TaxCodesButton() {
-
   const [state, setState] = useState<{ msg: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const run = async () => {
@@ -379,7 +374,9 @@ function TaxCodesButton() {
         </span>
       </div>
       {state && (
-        <p className={`mt-2 text-xs ${state.ok ? "text-[#1E5637]" : "text-red-700"}`}>{state.msg}</p>
+        <p className={`mt-2 text-xs ${state.ok ? "text-[#1E5637]" : "text-red-700"}`}>
+          {state.msg}
+        </p>
       )}
     </div>
   );
@@ -408,9 +405,9 @@ function AdminRow({
   const [description, setDescription] = useState(item.description ?? "");
 
   const [publishOpen, setPublishOpen] = useState(false);
-  const [verdict, setVerdict] = useState<
-    "consistent" | "concerns" | "failed" | "insufficient"
-  >("consistent");
+  const [verdict, setVerdict] = useState<"consistent" | "concerns" | "failed" | "insufficient">(
+    "consistent",
+  );
   const [labName, setLabName] = useState("");
   const [batchId, setBatchId] = useState("");
   const [summary, setSummary] = useState("");
@@ -421,8 +418,8 @@ function AdminRow({
         <div>
           <h2 className="font-serif text-2xl text-foreground">{item.product_name}</h2>
           <div className="text-[11px] tracking-[0.14em] uppercase text-muted-foreground">
-            {item.seller || "—"} · {(totals?.pledged_cents ?? 0) / 100 | 0} pledged /{" "}
-            {(item.goal_cents ?? 0) / 100 | 0} · {totals?.backers ?? 0} backers
+            {item.seller || "—"} · {((totals?.pledged_cents ?? 0) / 100) | 0} pledged /{" "}
+            {((item.goal_cents ?? 0) / 100) | 0} · {totals?.backers ?? 0} backers
           </div>
         </div>
         <Link

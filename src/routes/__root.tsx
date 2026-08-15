@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
-import appCss from "../styles.css?url";
+import appCss from "../styles/styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteFooter } from "../components/SiteFooter";
 
@@ -89,10 +89,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Peptide Certificate Checker | Peptide CoA Analysis" },
       { name: "twitter:title", content: "Peptide Certificate Checker | Peptide CoA Analysis" },
-      { property: "og:description", content: "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not." },
-      { name: "twitter:description", content: "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8b58fd27-a06c-41f9-aae1-d09059ba3044" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8b58fd27-a06c-41f9-aae1-d09059ba3044" },
+      {
+        property: "og:description",
+        content:
+          "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Read a peptide Certificate of Analysis and see, field by field, what the document actually reports, and what it does not.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8b58fd27-a06c-41f9-aae1-d09059ba3044",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8b58fd27-a06c-41f9-aae1-d09059ba3044",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

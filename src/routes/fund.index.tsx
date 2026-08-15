@@ -1,10 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import {
-  EmbeddedCheckoutProvider,
-  EmbeddedCheckout,
-} from "@stripe/react-stripe-js";
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getBoard, getFundTotal, getItem, createPledgeCheckout } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
@@ -82,13 +79,34 @@ function labBadge(lab: string, us_only: boolean) {
 }
 
 const stateStyle: Record<string, { label: string; className: string }> = {
-  nominated: { label: "Nominated", className: "bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-fg)]" },
-  funding: { label: "Funding", className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]" },
-  funded: { label: "Funded", className: "bg-[color:var(--badge-ok-bg)] text-[color:var(--badge-ok-fg)]" },
-  procuring: { label: "Procuring sample", className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]" },
-  testing: { label: "Testing in progress", className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]" },
-  published: { label: "Results published", className: "bg-[color:var(--badge-ok-bg)] text-[color:var(--badge-ok-fg)]" },
-  expired: { label: "Expired", className: "bg-[color:var(--badge-fail-bg)] text-[color:var(--badge-fail-fg)]" },
+  nominated: {
+    label: "Nominated",
+    className: "bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-fg)]",
+  },
+  funding: {
+    label: "Funding",
+    className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]",
+  },
+  funded: {
+    label: "Funded",
+    className: "bg-[color:var(--badge-ok-bg)] text-[color:var(--badge-ok-fg)]",
+  },
+  procuring: {
+    label: "Procuring sample",
+    className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]",
+  },
+  testing: {
+    label: "Testing in progress",
+    className: "bg-[color:var(--badge-warn-bg)] text-[color:var(--badge-warn-fg)]",
+  },
+  published: {
+    label: "Results published",
+    className: "bg-[color:var(--badge-ok-bg)] text-[color:var(--badge-ok-fg)]",
+  },
+  expired: {
+    label: "Expired",
+    className: "bg-[color:var(--badge-fail-bg)] text-[color:var(--badge-fail-fg)]",
+  },
 };
 
 function BoardIndex() {
@@ -141,7 +159,9 @@ function BoardIndex() {
               className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-foreground transition-colors hover:border-foreground/40"
             >
               How funding targets are set
-              <span aria-hidden className={`transition-transform ${howOpen ? "rotate-180" : ""}`}>⌄</span>
+              <span aria-hidden className={`transition-transform ${howOpen ? "rotate-180" : ""}`}>
+                ⌄
+              </span>
             </button>
             {fund.data !== undefined && fund.data > 0 && (
               <span className="rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
@@ -165,7 +185,9 @@ function BoardIndex() {
                   <li>Heavy metals — ~$60–80</li>
                   <li>Sterility add-on (TAMC + TYMC)</li>
                   <li className="font-medium">Full panel — ~$828</li>
-                  <li className="text-muted-foreground">Turnaround: 5–10 business days · expedite +100%</li>
+                  <li className="text-muted-foreground">
+                    Turnaround: 5–10 business days · expedite +100%
+                  </li>
                 </ul>
               </div>
               <div>
@@ -176,7 +198,9 @@ function BoardIndex() {
                   <li>Purity — free (Finnrick‑funded)</li>
                   <li>Endotoxin — ~$110</li>
                   <li>Heavy metals — add‑on (~$70)</li>
-                  <li className="text-muted-foreground">A handful of $5 backers can fully fund one Finnrick campaign.</li>
+                  <li className="text-muted-foreground">
+                    A handful of $5 backers can fully fund one Finnrick campaign.
+                  </li>
                 </ul>
               </div>
             </div>
@@ -199,7 +223,10 @@ function BoardIndex() {
           {board.isLoading ? (
             <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-72 animate-pulse rounded-xl border border-border bg-card" />
+                <div
+                  key={i}
+                  className="h-72 animate-pulse rounded-xl border border-border bg-card"
+                />
               ))}
             </div>
           ) : items.length === 0 ? (
@@ -225,15 +252,13 @@ function BoardIndex() {
 
         {/* Global trust footer */}
         <section className="mt-16 rounded-xl border border-border bg-card p-6 text-xs leading-relaxed text-muted-foreground">
-          Results describe a specific batch tested by an independent lab. They are not a
-          statement that the product is safe to inject, consume, effective, or approved. All
-          samples analysed are for molecular biology grade research use only.
+          Results describe a specific batch tested by an independent lab. They are not a statement
+          that the product is safe to inject, consume, effective, or approved. All samples analysed
+          are for molecular biology grade research use only.
         </section>
       </main>
 
-      {pledgeFor && (
-        <PledgeModal itemId={pledgeFor} onClose={() => setPledgeFor(null)} />
-      )}
+      {pledgeFor && <PledgeModal itemId={pledgeFor} onClose={() => setPledgeFor(null)} />}
     </div>
   );
 }
@@ -289,7 +314,9 @@ function CampaignCard({
           </div>
         )}
         <div className="absolute left-4 top-4">
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[0.14em] uppercase ${stateBadge.className}`}>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[0.14em] uppercase ${stateBadge.className}`}
+          >
             {stateBadge.label}
           </span>
         </div>
@@ -316,7 +343,12 @@ function CampaignCard({
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           {item.seller && <span>{item.seller}</span>}
-          {item.batch_id && <><span>·</span><span className="font-mono">Batch {item.batch_id}</span></>}
+          {item.batch_id && (
+            <>
+              <span>·</span>
+              <span className="font-mono">Batch {item.batch_id}</span>
+            </>
+          )}
         </div>
 
         {/* Progress */}
@@ -481,7 +513,9 @@ function TierLadder({ tiers, raised, state }: { tiers: Tier[]; raised: number; s
                 <span className={unlocked ? "text-foreground" : "text-muted-foreground"}>
                   {t.name}
                 </span>
-                <span className={`font-mono tabular-nums ${unlocked ? "text-foreground" : "text-muted-foreground"}`}>
+                <span
+                  className={`font-mono tabular-nums ${unlocked ? "text-foreground" : "text-muted-foreground"}`}
+                >
                   {t.free ? "$0 covered by lab" : money(t.threshold_cents)}
                 </span>
               </div>
@@ -509,8 +543,14 @@ function ResultsPanel({
   const rows: Array<[string, string]> = [
     ["Purity", findings.purity_pct ? `${findings.purity_pct}%` : "—"],
     ["Endotoxin", findings.endotoxin_eu_per_vial ?? "—"],
-    ["Heavy metals", findings.heavy_metals_pass === undefined ? "—" : findings.heavy_metals_pass ? "Pass" : "Fail"],
-    ["Sterility", findings.sterility_pass === undefined ? "—" : findings.sterility_pass ? "Pass" : "Fail"],
+    [
+      "Heavy metals",
+      findings.heavy_metals_pass === undefined ? "—" : findings.heavy_metals_pass ? "Pass" : "Fail",
+    ],
+    [
+      "Sterility",
+      findings.sterility_pass === undefined ? "—" : findings.sterility_pass ? "Pass" : "Fail",
+    ],
   ];
   return (
     <div className="mt-5 rounded-lg border border-border bg-background/40 p-3">
@@ -650,8 +690,8 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
                         selected
                           ? "border-foreground bg-foreground text-background"
                           : isDefault
-                          ? "border-foreground/60 bg-card text-foreground hover:border-foreground"
-                          : "border-border bg-card text-foreground hover:border-foreground/40"
+                            ? "border-foreground/60 bg-card text-foreground hover:border-foreground"
+                            : "border-border bg-card text-foreground hover:border-foreground/40"
                       }`}
                     >
                       {money(v)}
@@ -714,17 +754,18 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
               {pledge.isPending
                 ? "…"
                 : signedIn
-                ? `Contribute ${money(amount)}`
-                : "Sign in to contribute"}
+                  ? `Contribute ${money(amount)}`
+                  : "Sign in to contribute"}
             </button>
 
             <p className="mt-2 text-center text-xs text-muted-foreground">
               Card and crypto (USDC) accepted.
             </p>
 
-
             <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-              Contributions are charged immediately and always fund independent testing. If this batch doesn't reach its goal by the deadline, your contribution rolls over to the most-backed active campaign and you receive that campaign's results.
+              Contributions are charged immediately and always fund independent testing. If this
+              batch doesn't reach its goal by the deadline, your contribution rolls over to the
+              most-backed active campaign and you receive that campaign's results.
             </p>
           </>
         ) : (

@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import {
-  EmbeddedCheckoutProvider,
-  EmbeddedCheckout,
-} from "@stripe/react-stripe-js";
-import { getItem, createPledgeCheckout, confirmPledgeSession, updatePledgeIdentity } from "@/lib/board.functions";
+  getItem,
+  createPledgeCheckout,
+  confirmPledgeSession,
+  updatePledgeIdentity,
+} from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +89,6 @@ function ItemDetail() {
   const [confirming, setConfirming] = useState(false);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
 
-
   const storageKey = `pledge_session_${itemId}`;
 
   useEffect(() => {
@@ -114,7 +115,6 @@ function ItemDetail() {
           setPledgeId(res.pledge_id ?? null);
           query.refetch();
         }
-
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
@@ -226,10 +226,10 @@ function ItemDetail() {
               {item.batch_id ? ` · batch ${item.batch_id}` : ""}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
-              You contributed {paidAmount ? money(paidAmount) : money(amount)}. If this batch reaches
-              its {money(goal)} goal, it goes to an independent lab and results are published for
-              every backer. If the goal is not met by the deadline, your contribution rolls over to
-              the most-backed active campaign.
+              You contributed {paidAmount ? money(paidAmount) : money(amount)}. If this batch
+              reaches its {money(goal)} goal, it goes to an independent lab and results are
+              published for every backer. If the goal is not met by the deadline, your contribution
+              rolls over to the most-backed active campaign.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
@@ -258,7 +258,6 @@ function ItemDetail() {
                 </p>
               </div>
             )}
-
           </div>
         )}
 
@@ -405,7 +404,11 @@ function ItemDetail() {
                   disabled={pledge.isPending || amount < 500}
                   className="mt-5 rounded-sm bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background disabled:opacity-40"
                 >
-                  {pledge.isPending ? "…" : signedIn ? `Contribute ${money(amount)}` : "Sign in to contribute"}
+                  {pledge.isPending
+                    ? "…"
+                    : signedIn
+                      ? `Contribute ${money(amount)}`
+                      : "Sign in to contribute"}
                 </button>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Card and crypto (USDC) accepted.
@@ -432,7 +435,8 @@ function ItemDetail() {
             </div>
             <p className="mt-3 whitespace-pre-line text-sm text-foreground">{result.summary}</p>
             <div className="mt-4 text-[11px] tracking-[0.14em] uppercase text-muted-foreground">
-              Signed off {result.signed_off_at ? new Date(result.signed_off_at).toLocaleDateString() : "—"}
+              Signed off{" "}
+              {result.signed_off_at ? new Date(result.signed_off_at).toLocaleDateString() : "—"}
               {result.lab_name ? ` · ${result.lab_name}` : ""}
               {result.batch_id ? ` · batch ${result.batch_id}` : ""}
             </div>
@@ -451,9 +455,8 @@ function ItemDetail() {
         </div>
 
         <div className="mt-10 rounded-sm border border-border bg-background p-4 text-xs leading-relaxed text-muted-foreground">
-          This describes an independent test of a specific batch of a product. It is not a
-          statement that the product is safe to inject or consume, or that it is effective or
-          approved.
+          This describes an independent test of a specific batch of a product. It is not a statement
+          that the product is safe to inject or consume, or that it is effective or approved.
         </div>
       </main>
     </div>

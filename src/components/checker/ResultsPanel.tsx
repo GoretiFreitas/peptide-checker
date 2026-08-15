@@ -1,6 +1,11 @@
 import { FileText, AlertCircle, ShieldAlert, Link2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import type { AnalysisResult, ExtractedCertificate, FieldResults, Flag } from "@/lib/certificate-types";
+import type {
+  AnalysisResult,
+  ExtractedCertificate,
+  FieldResults,
+  Flag,
+} from "@/lib/certificate-types";
 import { StatusBadge, VerdictBadge } from "./StatusBadge";
 
 interface RegisterInfo {
@@ -71,10 +76,14 @@ function PanelShell({ children }: { children: React.ReactNode }) {
 
 function summarize(result: AnalysisResult): string {
   const { extracted, fieldResults, verdict } = result;
-  const name = extracted.productName && extracted.productName !== "not reported"
-    ? extracted.productName
-    : "This certificate";
-  const purity = extracted.purity.percent !== null ? `${extracted.purity.percent}% purity` : "no reported purity";
+  const name =
+    extracted.productName && extracted.productName !== "not reported"
+      ? extracted.productName
+      : "This certificate";
+  const purity =
+    extracted.purity.percent !== null
+      ? `${extracted.purity.percent}% purity`
+      : "no reported purity";
   const missing: string[] = [];
   if (fieldResults.sterility === "not tested") missing.push("sterility");
   if (fieldResults.endotoxins === "not tested") missing.push("endotoxins");
@@ -106,9 +115,7 @@ function Results({
           <div className="mt-2">
             <VerdictBadge verdict={verdict} />
           </div>
-          <p className="mt-3 max-w-[70ch] text-sm text-foreground">
-            {summarize(result)}
-          </p>
+          <p className="mt-3 max-w-[70ch] text-sm text-foreground">{summarize(result)}</p>
           {verdict === "Document review — consistent" && (
             <div className="mt-2 text-xs text-muted-foreground">
               Based on the document only, not an independent test.
@@ -130,7 +137,8 @@ function Results({
                 : missingSterile
                   ? "This certificate does not report sterility testing."
                   : "This certificate does not report bacterial endotoxin testing."}{" "}
-              For anything intended to be injected, missing sterility or endotoxin results is a red flag. Purity does not mean safety.
+              For anything intended to be injected, missing sterility or endotoxin results is a red
+              flag. Purity does not mean safety.
             </p>
           </div>
         </div>
@@ -151,9 +159,10 @@ function Results({
 
 function RegisterBox({ info }: { info: RegisterInfo }) {
   const short = `${info.sha256.slice(0, 10)}…${info.sha256.slice(-6)}`;
-  const shareUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/verify?hash=${info.sha256}`
-    : `/verify?hash=${info.sha256}`;
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/verify?hash=${info.sha256}`
+      : `/verify?hash=${info.sha256}`;
   return (
     <div className="rounded-md border border-border bg-background/60 p-4">
       <div className="flex items-center gap-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground">
@@ -360,7 +369,9 @@ function HonestFraming({ productName }: { productName: string }) {
       </p>
       <Link
         to="/fund/nominate"
-        search={{ product: productName && productName !== "not reported" ? productName : undefined }}
+        search={{
+          product: productName && productName !== "not reported" ? productName : undefined,
+        }}
         className="inline-flex items-center rounded-sm bg-foreground px-4 py-2 text-[11px] font-medium tracking-[0.22em] uppercase text-background hover:bg-foreground/90"
       >
         Nominate for independent testing

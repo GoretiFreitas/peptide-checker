@@ -42,18 +42,13 @@ function initialsAvatar(seed: string) {
 }
 
 export function BackerList({ backers }: { backers: Backer[] }) {
-  const visible = useMemo(
-    () => backers.filter((b) => b.display_mode !== "anonymous"),
-    [backers],
-  );
+  const visible = useMemo(() => backers.filter((b) => b.display_mode !== "anonymous"), [backers]);
   const anonymousCount = backers.length - visible.length;
 
   if (backers.length === 0) {
     return (
       <div className="rounded-sm border border-border bg-card p-6">
-        <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-          Backers
-        </div>
+        <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Backers</div>
         <p className="mt-2 text-sm text-muted-foreground">No contributions yet.</p>
       </div>
     );
@@ -62,13 +57,9 @@ export function BackerList({ backers }: { backers: Backer[] }) {
   return (
     <div className="rounded-sm border border-border bg-card p-6">
       <div className="flex items-center justify-between">
-        <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-          Backers
-        </div>
+        <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Backers</div>
         {anonymousCount > 0 && (
-          <div className="text-[11px] text-muted-foreground">
-            {anonymousCount} anonymous
-          </div>
+          <div className="text-[11px] text-muted-foreground">{anonymousCount} anonymous</div>
         )}
       </div>
       <ul className="mt-4 space-y-3">
@@ -97,9 +88,7 @@ export function BackerList({ backers }: { backers: Backer[] }) {
               )}
             </div>
             <div className="text-right">
-              <div className="text-foreground">
-                {b.hide_amount ? "—" : money(b.amount_cents)}
-              </div>
+              <div className="text-foreground">{b.hide_amount ? "—" : money(b.amount_cents)}</div>
               <div className="text-[11px] text-muted-foreground">{dateLabel(b.created_at)}</div>
             </div>
           </li>

@@ -11,7 +11,8 @@ export function PaymentTestModeBanner() {
   if (clientToken.startsWith("pk_test_")) {
     return (
       <div className="w-full border-b border-orange-300 bg-orange-100 px-4 py-2 text-center text-xs tracking-wide text-orange-900">
-        Test mode — use card <span className="font-mono">4242 4242 4242 4242</span> · any future date · any CVC.
+        Test mode — use card <span className="font-mono">4242 4242 4242 4242</span> · any future
+        date · any CVC.
       </div>
     );
   }

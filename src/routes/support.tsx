@@ -74,9 +74,30 @@ const OPTIONS: Array<{
     blurb: "Two months free. Same benefits as monthly.",
     kind: "sub",
   },
-  { id: "donate_10", priceId: "donate_10", title: "Donate $10", price: "$10", blurb: "One-time contribution to the testing fund.", kind: "one" },
-  { id: "donate_25", priceId: "donate_25", title: "Donate $25", price: "$25", blurb: "One-time contribution to the testing fund.", kind: "one" },
-  { id: "donate_100", priceId: "donate_100", title: "Donate $100", price: "$100", blurb: "One-time contribution to the testing fund.", kind: "one" },
+  {
+    id: "donate_10",
+    priceId: "donate_10",
+    title: "Donate $10",
+    price: "$10",
+    blurb: "One-time contribution to the testing fund.",
+    kind: "one",
+  },
+  {
+    id: "donate_25",
+    priceId: "donate_25",
+    title: "Donate $25",
+    price: "$25",
+    blurb: "One-time contribution to the testing fund.",
+    kind: "one",
+  },
+  {
+    id: "donate_100",
+    priceId: "donate_100",
+    title: "Donate $100",
+    price: "$100",
+    blurb: "One-time contribution to the testing fund.",
+    kind: "one",
+  },
   {
     id: "registry_full_500",
     priceId: "registry_full_500",
@@ -99,7 +120,11 @@ function SupportPage() {
   const { sub, isActive, isPastDue } = useSubscription(userId);
   const { isSupporter, isRegistryMember } = useUserRoles(userId);
   const env = (() => {
-    try { return getStripeEnvironment(); } catch { return "sandbox" as const; }
+    try {
+      return getStripeEnvironment();
+    } catch {
+      return "sandbox" as const;
+    }
   })();
   const purchasesQ = useQuery({
     queryKey: ["my-purchases", userId, env],
@@ -181,21 +206,20 @@ function SupportPage() {
           <div className="mt-8 rounded-md border border-dashed border-emerald-600/40 bg-emerald-50/40 p-4 text-sm text-emerald-900">
             Thank you — your payment went through. Access and receipts will appear here in a moment
             (they arrive from Stripe via webhook).
-            <button
-              className="ml-3 underline"
-              onClick={() => setJustPurchased(false)}
-            >
+            <button className="ml-3 underline" onClick={() => setJustPurchased(false)}>
               Dismiss
             </button>
           </div>
         )}
 
-
         {isPastDue && (
           <div className="mt-8 rounded-md border border-dashed border-yellow-600/40 bg-yellow-50/40 p-4 text-sm">
             Your last payment did not go through. Stripe is retrying automatically — your access
             stays active for now.{" "}
-            <button onClick={openPortal} className="underline">Update payment method</button>.
+            <button onClick={openPortal} className="underline">
+              Update payment method
+            </button>
+            .
           </div>
         )}
 
@@ -205,13 +229,19 @@ function SupportPage() {
               <p className="text-sm">
                 You&apos;re a supporter ({sub.price_id.replace("supporter_", "")}).{" "}
                 {sub.cancel_at_period_end && sub.current_period_end && (
-                  <span>Access continues until {new Date(sub.current_period_end).toLocaleDateString()}. </span>
+                  <span>
+                    Access continues until {new Date(sub.current_period_end).toLocaleDateString()}
+                    .{" "}
+                  </span>
                 )}
               </p>
               {isSupporter && <SupporterBadge variant="supporter" />}
               {isRegistryMember && <SupporterBadge variant="registry_member" />}
             </div>
-            <button onClick={openPortal} className="mt-3 text-xs uppercase tracking-[0.18em] underline">
+            <button
+              onClick={openPortal}
+              className="mt-3 text-xs uppercase tracking-[0.18em] underline"
+            >
               Manage subscription
             </button>
           </div>
@@ -227,7 +257,10 @@ function SupportPage() {
 
         {clientSecret ? (
           <div className="mt-10">
-            <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret: async () => clientSecret }}>
+            <EmbeddedCheckoutProvider
+              stripe={getStripe()}
+              options={{ fetchClientSecret: async () => clientSecret }}
+            >
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
             <button
@@ -261,7 +294,11 @@ function SupportPage() {
                   onClick={() => openCheckout(o.priceId)}
                   className="mt-5 rounded-sm border border-foreground px-4 py-2 text-xs uppercase tracking-[0.18em] hover:bg-foreground hover:text-background disabled:opacity-50"
                 >
-                  {selecting === o.priceId ? "Loading…" : o.kind === "sub" ? "Subscribe" : "Contribute"}
+                  {selecting === o.priceId
+                    ? "Loading…"
+                    : o.kind === "sub"
+                      ? "Subscribe"
+                      : "Contribute"}
                 </button>
               </div>
             ))}
@@ -272,12 +309,17 @@ function SupportPage() {
 
         {error && <p className="mt-6 text-sm text-red-700">{error}</p>}
 
-        {userId && purchasesQ.data && "purchases" in purchasesQ.data && purchasesQ.data.purchases.length > 0 && (
-          <PurchaseHistory rows={purchasesQ.data.purchases as PurchaseRow[]} env={env} />
-        )}
+        {userId &&
+          purchasesQ.data &&
+          "purchases" in purchasesQ.data &&
+          purchasesQ.data.purchases.length > 0 && (
+            <PurchaseHistory rows={purchasesQ.data.purchases as PurchaseRow[]} env={env} />
+          )}
 
         <p className="mt-16 text-xs text-muted-foreground">
-          <Link to="/fund" className="underline">Or fund a specific product test on the fund →</Link>
+          <Link to="/fund" className="underline">
+            Or fund a specific product test on the fund →
+          </Link>
         </p>
       </main>
     </div>
@@ -309,7 +351,9 @@ function PurchaseHistory({ rows, env }: { rows: PurchaseRow[]; env: "sandbox" | 
     }
   };
   const money = (c: number, cur: string) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: cur.toUpperCase() }).format(c / 100);
+    new Intl.NumberFormat("en-US", { style: "currency", currency: cur.toUpperCase() }).format(
+      c / 100,
+    );
   const kindLabel: Record<string, string> = {
     donation: "Donation",
     registry: "Registry access",
