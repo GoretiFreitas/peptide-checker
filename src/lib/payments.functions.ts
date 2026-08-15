@@ -42,7 +42,7 @@ async function resolveOrCreateCustomer(
 /** Create an embedded checkout session for support/donation/registry purchases. */
 export const createSupportCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         priceId: z.string().regex(/^[a-zA-Z0-9_-]+$/),
@@ -104,7 +104,9 @@ export const createSupportCheckout = createServerFn({ method: "POST" })
 /** Open the Stripe customer portal for managing subscriptions / cancelling. */
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ returnUrl: z.string().url(), environment: envSchema }).parse(d))
+  .validator((d: unknown) =>
+    z.object({ returnUrl: z.string().url(), environment: envSchema }).parse(d),
+  )
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
     try {
       const { supabase, userId } = context;
@@ -133,7 +135,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
 /** List the signed-in user's purchases in the current environment. */
 export const getMyPurchases = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ environment: envSchema }).parse(d))
+  .validator((d: unknown) => z.object({ environment: envSchema }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: rows, error } = await supabase
@@ -152,7 +154,7 @@ export const getMyPurchases = createServerFn({ method: "POST" })
 /** Get the Stripe-hosted receipt URL for one of the signed-in user's purchases. */
 export const getReceiptUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z.object({ purchaseId: z.string().uuid(), environment: envSchema }).parse(d),
   )
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
@@ -187,7 +189,7 @@ export const getReceiptUrl = createServerFn({ method: "POST" })
  */
 export const getFullReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ itemId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -214,7 +216,7 @@ export const getFullReport = createServerFn({ method: "POST" })
  */
 export const applyStripeTaxCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ environment: envSchema }).parse(d))
+  .validator((d: unknown) => z.object({ environment: envSchema }).parse(d))
   .handler(async ({ data, context }): Promise<{ updated: string[] } | { error: string }> => {
     const { supabase, userId } = context;
     const { data: roles } = await supabase
@@ -225,7 +227,6 @@ export const applyStripeTaxCodes = createServerFn({ method: "POST" })
     if (!roles || roles.length === 0) return { error: "Admins only" };
     try {
       const stripe = createStripeClient(data.environment);
-      // Look up each product by lookup_key on any of its prices.
       const priceKeys = [
         "supporter_monthly",
         "supporter_yearly",
@@ -234,8 +235,6 @@ export const applyStripeTaxCodes = createServerFn({ method: "POST" })
         "donate_100",
         "registry_full_500",
       ];
-      // txcd_10103001 = SaaS / electronic services (for supporter memberships)
-      // txcd_10000000 = general digital goods (donations & registry unlock)
       const taxCodeByPriceKey: Record<string, string> = {
         supporter_monthly: "txcd_10103001",
         supporter_yearly: "txcd_10103001",
@@ -261,3 +260,4 @@ export const applyStripeTaxCodes = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+

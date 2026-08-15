@@ -59,7 +59,7 @@ const EMPTY: ExtractedCertificate = {
 };
 
 export const extractCertificate = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => inputSchema.parse(input))
+  .validator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }): Promise<ExtractedCertificate> => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI service is not configured.");

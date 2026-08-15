@@ -149,7 +149,9 @@ function SharePage() {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch (err) {
+      console.warn("Clipboard copy failed:", err);
+    }
   };
 
   if (!item) {

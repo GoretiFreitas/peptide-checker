@@ -304,7 +304,6 @@ function CampaignCard({
       {/* Thumbnail */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-gradient-to-br from-[oklch(0.94_0.02_260)] to-[oklch(0.97_0.015_90)]">
         {item.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={item.thumbnail_url} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">

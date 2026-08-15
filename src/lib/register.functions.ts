@@ -1,18 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-function publicSupabase() {
-  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
+let _publicSupabase: SupabaseClient<Database> | undefined;
+
+function publicSupabase(): SupabaseClient<Database> {
+  if (!_publicSupabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase public credentials not configured");
+    }
+    _publicSupabase = createClient<Database>(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return _publicSupabase;
 }
 
 const hashRe = /^[a-f0-9]{64}$/i;
 
 export const registerCertificate = createServerFn({ method: "POST" })
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         sha256: z.string().regex(hashRe),
@@ -35,12 +45,12 @@ export const registerCertificate = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (existing) {
-      // Bump seen_count via server role (bookkeeping-only fields allowed by trigger).
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const currentSeen = Number((existing as any).seen_count ?? 0);
       await (supabaseAdmin as any)
         .from("certificate_register")
         .update({
-          seen_count: (existing as any).seen_count + 1,
+          seen_count: currentSeen + 1,
           last_seen_at: new Date().toISOString(),
         })
         .eq("id", (existing as any).id);
@@ -67,7 +77,7 @@ export const registerCertificate = createServerFn({ method: "POST" })
   });
 
 export const lookupRegister = createServerFn({ method: "POST" })
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         query: z.string().min(1).max(200),
@@ -103,3 +113,4 @@ export const lookupRegister = createServerFn({ method: "POST" })
     if (matches.length === 1) return { result: "registered" as const, entry: matches[0], matches };
     return { result: "conflict" as const, entry: matches[0], matches };
   });
+

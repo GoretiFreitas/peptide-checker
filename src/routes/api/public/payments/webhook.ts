@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { verifyWebhook, type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 
 async function getAdmin() {
-  const { createClient } = await import("@supabase/supabase-js");
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as any;
 }
 
 // ------- Entitlement helpers -------

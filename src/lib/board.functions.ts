@@ -1,16 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { computeFundingTotals } from "@/lib/board-totals.server";
 import { fetchProfileHandles, listCampaignBackers } from "@/lib/profiles.server";
 
-function publicSupabase() {
-  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
+let _publicSupabase: SupabaseClient<Database> | undefined;
+
+function publicSupabase(): SupabaseClient<Database> {
+  if (!_publicSupabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase public credentials not configured");
+    }
+    _publicSupabase = createClient<Database>(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return _publicSupabase;
 }
 
 // ---------------- Public reads ----------------
@@ -22,30 +32,40 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
     computeFundingTotals(),
   ]);
   const itemRows = items.data ?? [];
-  // Fetch anonymized backer strip using admin client (bypasses RLS) — anonymized fields only.
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const backersByItem: Record<
     string,
     Array<{ amount_cents: number; created_at: string; initial: string }>
   > = {};
-  await Promise.all(
-    itemRows.map(async (it: any) => {
-      const { data } = await (supabaseAdmin as any)
-        .from("pledges")
-        .select("amount_cents, created_at, user_id")
-        .eq("item_id", it.id)
-        .in("status", ["paid", "authorized", "captured"])
-        .order("created_at", { ascending: false })
-        .limit(12);
-      const rows = (data as any[]) ?? [];
-      const handles = await fetchProfileHandles(rows.map((r) => r.user_id));
-      backersByItem[it.id] = rows.map((r) => ({
-        amount_cents: r.amount_cents,
-        created_at: r.created_at,
-        initial: (handles[r.user_id]?.[0] ?? "?").toUpperCase(),
-      }));
-    }),
-  );
+
+  if (itemRows.length > 0) {
+    const itemIds = itemRows.map((it: { id: string }) => it.id);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: pledgeData } = await (supabaseAdmin as any)
+      .from("pledges")
+      .select("item_id, amount_cents, created_at, user_id")
+      .in("item_id", itemIds)
+      .in("status", ["paid", "authorized", "captured"])
+      .order("created_at", { ascending: false });
+
+    const allPledges = (pledgeData as any[]) ?? [];
+    const allUserIds = allPledges.map((p) => p.user_id);
+    const handles = await fetchProfileHandles(allUserIds);
+
+    for (const it of itemRows) {
+      backersByItem[it.id] = [];
+    }
+
+    for (const p of allPledges) {
+      const currentList = backersByItem[p.item_id];
+      if (currentList && currentList.length < 12) {
+        currentList.push({
+          amount_cents: Number(p.amount_cents ?? 0),
+          created_at: p.created_at,
+          initial: (handles[p.user_id]?.[0] ?? "?").toUpperCase(),
+        });
+      }
+    }
+  }
 
   return {
     items: itemRows,
@@ -55,7 +75,7 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const getItem = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const sb = publicSupabase();
     const [item, stretch, totals, result, backers] = await Promise.all([
@@ -75,7 +95,7 @@ export const getItem = createServerFn({ method: "POST" })
   });
 
 export const getCampaignBackers = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ item_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ item_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => listCampaignBackers(data.item_id));
 
 export const getFundTotal = createServerFn({ method: "GET" }).handler(async () => {
@@ -88,7 +108,7 @@ export const getFundTotal = createServerFn({ method: "GET" }).handler(async () =
 
 export const nominateItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         product_name: z.string().min(2).max(200),
@@ -142,7 +162,7 @@ const handleSchema = z
 
 export const updatePledgeIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         pledge_id: z.string().uuid(),
@@ -172,7 +192,7 @@ export const updatePledgeIdentity = createServerFn({ method: "POST" })
 
 export const createPledgeCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         item_id: z.string().uuid(),
@@ -246,12 +266,10 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
           item_id: item.id,
           user_id: context.userId,
         },
-        // Crypto (USDC) requires a USD-presented amount; disable currency conversion.
         adaptive_pricing: { enabled: false },
         ...(user?.email && { customer_email: user.email }),
       });
 
-      // Store checkout session id
       await context.supabase
         .from("pledges")
         .update({ stripe_checkout_session_id: session.id })
@@ -270,7 +288,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
  */
 export const confirmPledgeSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         session_id: z.string().min(10).max(200),
@@ -309,7 +327,6 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
               ? session.payment_intent
               : ((session.payment_intent as { id?: string } | null)?.id ?? null);
 
-          // Record card vs crypto (USDC) for the audit trail.
           let methodType: string | null = null;
           if (paymentIntentId) {
             try {
@@ -369,7 +386,7 @@ async function requireAdmin(supabase: any, userId: string) {
 
 export const adminSetItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -411,7 +428,7 @@ export const adminSetItem = createServerFn({ method: "POST" })
  */
 export const adminCloseCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ item_id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ item_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireAdmin(context.supabase, context.userId);
     const sb: any = context.supabase;
@@ -508,9 +525,6 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireAdmin(context.supabase, context.userId);
-    // PII columns (backer_email, Stripe identifiers) are no longer readable by
-    // the Data API roles; read them with the server-only admin client after the
-    // admin role check above.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const sb: any = supabaseAdmin;
     const { data: rows } = await sb
@@ -590,7 +604,7 @@ export const adminFundMetrics = createServerFn({ method: "GET" })
 
 export const adminPublishResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d: unknown) =>
     z
       .object({
         item_id: z.string().uuid(),
@@ -635,3 +649,4 @@ export const isAdmin = createServerFn({ method: "GET" })
       .maybeSingle();
     return { admin: !!data };
   });
+

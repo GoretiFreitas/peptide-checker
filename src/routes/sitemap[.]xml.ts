@@ -23,13 +23,8 @@ export const Route = createFileRoute("/sitemap.xml")({
 
         // Include published registry reports.
         try {
-          const { createClient } = await import("@supabase/supabase-js");
-          const sb = createClient(
-            process.env.SUPABASE_URL!,
-            process.env.SUPABASE_PUBLISHABLE_KEY!,
-            { auth: { persistSession: false, autoRefreshToken: false } },
-          );
-          const { data: items } = await sb.from("board_items").select("id, state, updated_at");
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: items } = await (supabaseAdmin as any).from("board_items").select("id, state, updated_at");
           for (const it of items ?? []) {
             entries.push({ path: `/fund/${it.id}`, changefreq: "weekly", priority: "0.6" });
             if (it.state === "published") {
