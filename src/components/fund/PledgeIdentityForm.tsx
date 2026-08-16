@@ -126,7 +126,7 @@ export function PledgeIdentityForm({
             <label key={opt.value} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
-                name={`display-${pledgeId}`}
+                name={`display-${pledgeId ?? "draft"}`}
                 value={opt.value}
                 checked={mode === opt.value}
                 onChange={() => setMode(opt.value as any)}
