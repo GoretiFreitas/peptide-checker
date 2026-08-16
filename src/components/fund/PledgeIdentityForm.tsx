@@ -110,9 +110,11 @@ export function PledgeIdentityForm({
         Your public backer identity
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Choose how you appear on this campaign&apos;s backer list. You can change this later while
-        signed in.
+        {pledgeId
+          ? "Choose how you appear on this campaign's backer list. You can change this later while signed in."
+          : "Choose how you appear on this campaign's backer list. We'll apply it to your contribution right after payment, and you can change it any time."}
       </p>
+
 
       <div className="mt-4 space-y-4">
         <div className="flex flex-wrap gap-4">
