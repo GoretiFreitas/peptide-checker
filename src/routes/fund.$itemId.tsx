@@ -7,7 +7,9 @@ import {
   createPledgeCheckout,
   confirmPledgeSession,
   updatePledgeIdentity,
+  getMyPledgeIdentity,
 } from "@/lib/board.functions";
+
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
