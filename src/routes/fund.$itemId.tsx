@@ -90,6 +90,14 @@ function ItemDetail() {
   const [memberGranted, setMemberGranted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
+  const identityFn = useServerFn(getMyPledgeIdentity);
+  const identityQuery = useQuery({
+    queryKey: ["pledge-identity", itemId, signedIn, pledgeId],
+    enabled: signedIn,
+    queryFn: () => identityFn({ data: { item_id: itemId } }),
+  });
+  const identity = identityQuery.data as any;
+
 
   const storageKey = `pledge_session_${itemId}`;
 
