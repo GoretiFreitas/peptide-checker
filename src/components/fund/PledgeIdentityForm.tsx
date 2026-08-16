@@ -197,8 +197,13 @@ export function PledgeIdentityForm({
 
         {error && <div className="text-sm text-destructive">{error}</div>}
         {saved && !error && (
-          <div className="text-sm text-muted-foreground">Saved — your backer list entry updated.</div>
+          <div className="text-sm text-muted-foreground">
+            {pledgeId
+              ? "Saved — your backer list entry updated."
+              : "Saved — this will be applied to your contribution after payment."}
+          </div>
         )}
+
 
         <button
           onClick={() => mutation.mutate()}
