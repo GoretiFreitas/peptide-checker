@@ -430,8 +430,22 @@ function ItemDetail() {
                 <p className="mt-2 text-xs text-muted-foreground">
                   Card and crypto (USDC) accepted.
                 </p>
+                {signedIn && (
+                  <PledgeIdentityForm
+                    key={identity?.id ?? "draft"}
+                    pledgeId={identity?.id ?? null}
+                    draftKey={draftKey}
+                    initial={{
+                      x_handle: identity?.x_handle ?? null,
+                      display_initials: identity?.display_initials ?? null,
+                      display_mode: (identity?.display_mode as any) ?? "initials",
+                      hide_amount: identity?.hide_amount ?? false,
+                    }}
+                  />
+                )}
               </>
             )}
+
             {clientSecret && (
               <div className="mt-6">
                 <EmbeddedCheckoutProvider
