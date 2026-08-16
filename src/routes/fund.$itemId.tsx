@@ -7,7 +7,9 @@ import {
   createPledgeCheckout,
   confirmPledgeSession,
   updatePledgeIdentity,
+  getMyPledgeIdentity,
 } from "@/lib/board.functions";
+
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +90,14 @@ function ItemDetail() {
   const [memberGranted, setMemberGranted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
+  const identityFn = useServerFn(getMyPledgeIdentity);
+  const identityQuery = useQuery({
+    queryKey: ["pledge-identity", itemId, signedIn, pledgeId],
+    enabled: signedIn,
+    queryFn: () => identityFn({ data: { item_id: itemId } }),
+  });
+  const identity = identityQuery.data as any;
+
 
   const storageKey = `pledge_session_${itemId}`;
 
@@ -261,12 +271,19 @@ function ItemDetail() {
           </div>
         )}
 
-        {(paidAmount !== null || justPledged) && signedIn && pledgeId && (
+        {signedIn && (identity?.id || pledgeId) && (
           <PledgeIdentityForm
-            pledgeId={pledgeId}
-            initial={{ display_mode: "initials", hide_amount: false }}
+            key={identity?.id ?? pledgeId}
+            pledgeId={identity?.id ?? pledgeId!}
+            initial={{
+              x_handle: identity?.x_handle ?? null,
+              display_initials: identity?.display_initials ?? null,
+              display_mode: (identity?.display_mode as any) ?? "initials",
+              hide_amount: identity?.hide_amount ?? false,
+            }}
           />
         )}
+
 
         {!fundable && !isMember && (
           <div className="mt-6 rounded-md border border-border bg-card p-5">
