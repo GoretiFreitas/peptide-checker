@@ -100,6 +100,8 @@ function ItemDetail() {
 
 
   const storageKey = `pledge_session_${itemId}`;
+  const draftKey = `pledge_identity_${itemId}`;
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
@@ -123,8 +125,33 @@ function ItemDetail() {
           setPaidAmount(res.amount_cents);
           setMemberGranted(!!res.member);
           setPledgeId(res.pledge_id ?? null);
+          // Apply the backer identity chosen before checkout, now that the pledge exists.
+          const draftRaw = window.localStorage.getItem(draftKey);
+          if (res.pledge_id && draftRaw) {
+            try {
+              const draft = JSON.parse(draftRaw);
+              updatePledgeIdentity({
+                data: {
+                  pledge_id: res.pledge_id,
+                  x_handle: draft.x_handle ?? "",
+                  display_initials: draft.display_initials ?? "",
+                  display_mode: draft.display_mode ?? "initials",
+                  hide_amount: !!draft.hide_amount,
+                },
+              })
+                .catch(() => {})
+                .finally(() => {
+                  window.localStorage.removeItem(draftKey);
+                  identityQuery.refetch();
+                  query.refetch();
+                });
+            } catch {
+              window.localStorage.removeItem(draftKey);
+            }
+          }
           query.refetch();
         }
+
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
@@ -430,8 +457,22 @@ function ItemDetail() {
                 <p className="mt-2 text-xs text-muted-foreground">
                   Card and crypto (USDC) accepted.
                 </p>
+                {signedIn && (
+                  <PledgeIdentityForm
+                    key={identity?.id ?? "draft"}
+                    pledgeId={identity?.id ?? null}
+                    draftKey={draftKey}
+                    initial={{
+                      x_handle: identity?.x_handle ?? null,
+                      display_initials: identity?.display_initials ?? null,
+                      display_mode: (identity?.display_mode as any) ?? "initials",
+                      hide_amount: identity?.hide_amount ?? false,
+                    }}
+                  />
+                )}
               </>
             )}
+
             {clientSecret && (
               <div className="mt-6">
                 <EmbeddedCheckoutProvider

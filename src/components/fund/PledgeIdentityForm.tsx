@@ -3,11 +3,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updatePledgeIdentity } from "@/lib/board.functions";
 import { useServerFn } from "@tanstack/react-start";
 
+export type PledgeIdentityDraft = {
+  x_handle: string | null;
+  display_initials: string | null;
+  display_mode: "handle" | "initials" | "anonymous";
+  hide_amount: boolean;
+};
+
 export function PledgeIdentityForm({
   pledgeId,
+  draftKey,
   initial,
 }: {
-  pledgeId: string;
+  /** Null before the contribution exists — the choice is saved as a draft and applied after payment. */
+  pledgeId: string | null;
+  draftKey?: string;
   initial?: {
     x_handle?: string | null;
     display_initials?: string | null;
@@ -15,6 +25,7 @@ export function PledgeIdentityForm({
     hide_amount?: boolean;
   };
 }) {
+
   const queryClient = useQueryClient();
   const updateFn = useServerFn(updatePledgeIdentity);
   const [handle, setHandle] = useState(initial?.x_handle ?? "");
@@ -49,6 +60,19 @@ export function PledgeIdentityForm({
       if (mode === "handle" && handle.trim().length === 0) {
         throw new Error("Enter your X handle or pick another option");
       }
+      if (!pledgeId) {
+        // No contribution yet — keep the choice locally and apply it once payment confirms.
+        if (draftKey && typeof window !== "undefined") {
+          const draft: PledgeIdentityDraft = {
+            x_handle: handle || null,
+            display_initials: initials || null,
+            display_mode: mode,
+            hide_amount: hideAmount,
+          };
+          window.localStorage.setItem(draftKey, JSON.stringify(draft));
+        }
+        return null;
+      }
       return await updateFn({
         data: {
           pledge_id: pledgeId,
@@ -70,6 +94,7 @@ export function PledgeIdentityForm({
     onError: (e: any) => setError(e?.message ?? "Could not update"),
   });
 
+
   const handleInput = (value: string) => {
     setHandle(
       value
@@ -85,9 +110,11 @@ export function PledgeIdentityForm({
         Your public backer identity
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Choose how you appear on this campaign&apos;s backer list. You can change this later while
-        signed in.
+        {pledgeId
+          ? "Choose how you appear on this campaign's backer list. You can change this later while signed in."
+          : "Choose how you appear on this campaign's backer list. We'll apply it to your contribution right after payment, and you can change it any time."}
       </p>
+
 
       <div className="mt-4 space-y-4">
         <div className="flex flex-wrap gap-4">
@@ -99,7 +126,7 @@ export function PledgeIdentityForm({
             <label key={opt.value} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
-                name={`display-${pledgeId}`}
+                name={`display-${pledgeId ?? "draft"}`}
                 value={opt.value}
                 checked={mode === opt.value}
                 onChange={() => setMode(opt.value as any)}
@@ -170,8 +197,13 @@ export function PledgeIdentityForm({
 
         {error && <div className="text-sm text-destructive">{error}</div>}
         {saved && !error && (
-          <div className="text-sm text-muted-foreground">Saved — your backer list entry updated.</div>
+          <div className="text-sm text-muted-foreground">
+            {pledgeId
+              ? "Saved — your backer list entry updated."
+              : "Saved — this will be applied to your contribution after payment."}
+          </div>
         )}
+
 
         <button
           onClick={() => mutation.mutate()}
