@@ -271,12 +271,19 @@ function ItemDetail() {
           </div>
         )}
 
-        {(paidAmount !== null || justPledged) && signedIn && pledgeId && (
+        {signedIn && (identity?.id || pledgeId) && (
           <PledgeIdentityForm
-            pledgeId={pledgeId}
-            initial={{ display_mode: "initials", hide_amount: false }}
+            key={identity?.id ?? pledgeId}
+            pledgeId={identity?.id ?? pledgeId!}
+            initial={{
+              x_handle: identity?.x_handle ?? null,
+              display_initials: identity?.display_initials ?? null,
+              display_mode: (identity?.display_mode as any) ?? "initials",
+              hide_amount: identity?.hide_amount ?? false,
+            }}
           />
         )}
+
 
         {!fundable && !isMember && (
           <div className="mt-6 rounded-md border border-border bg-card p-5">
