@@ -100,6 +100,8 @@ function ItemDetail() {
 
 
   const storageKey = `pledge_session_${itemId}`;
+  const draftKey = `pledge_identity_${itemId}`;
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
