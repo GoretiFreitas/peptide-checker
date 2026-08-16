@@ -3,11 +3,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updatePledgeIdentity } from "@/lib/board.functions";
 import { useServerFn } from "@tanstack/react-start";
 
+export type PledgeIdentityDraft = {
+  x_handle: string | null;
+  display_initials: string | null;
+  display_mode: "handle" | "initials" | "anonymous";
+  hide_amount: boolean;
+};
+
 export function PledgeIdentityForm({
   pledgeId,
+  draftKey,
   initial,
 }: {
-  pledgeId: string;
+  /** Null before the contribution exists — the choice is saved as a draft and applied after payment. */
+  pledgeId: string | null;
+  draftKey?: string;
   initial?: {
     x_handle?: string | null;
     display_initials?: string | null;
@@ -15,6 +25,7 @@ export function PledgeIdentityForm({
     hide_amount?: boolean;
   };
 }) {
+
   const queryClient = useQueryClient();
   const updateFn = useServerFn(updatePledgeIdentity);
   const [handle, setHandle] = useState(initial?.x_handle ?? "");
