@@ -60,6 +60,19 @@ export function PledgeIdentityForm({
       if (mode === "handle" && handle.trim().length === 0) {
         throw new Error("Enter your X handle or pick another option");
       }
+      if (!pledgeId) {
+        // No contribution yet — keep the choice locally and apply it once payment confirms.
+        if (draftKey && typeof window !== "undefined") {
+          const draft: PledgeIdentityDraft = {
+            x_handle: handle || null,
+            display_initials: initials || null,
+            display_mode: mode,
+            hide_amount: hideAmount,
+          };
+          window.localStorage.setItem(draftKey, JSON.stringify(draft));
+        }
+        return null;
+      }
       return await updateFn({
         data: {
           pledge_id: pledgeId,
@@ -80,6 +93,7 @@ export function PledgeIdentityForm({
     },
     onError: (e: any) => setError(e?.message ?? "Could not update"),
   });
+
 
   const handleInput = (value: string) => {
     setHandle(
