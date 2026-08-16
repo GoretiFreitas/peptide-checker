@@ -160,6 +160,21 @@ const handleSchema = z
   .optional()
   .or(z.literal(""));
 
+export const getMyPledgeIdentity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ item_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row } = await (context.supabase as any)
+      .from("pledges")
+      .select("id, x_handle, display_mode, hide_amount, display_initials")
+      .eq("item_id", data.item_id)
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (row as any) ?? null;
+  });
+
 export const updatePledgeIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
@@ -167,6 +182,7 @@ export const updatePledgeIdentity = createServerFn({ method: "POST" })
       .object({
         pledge_id: z.string().uuid(),
         x_handle: handleSchema,
+        display_initials: z.string().max(3).optional().or(z.literal("")),
         display_mode: z.enum(["handle", "initials", "anonymous"]),
         hide_amount: z.boolean().default(false),
       })
@@ -177,18 +193,41 @@ export const updatePledgeIdentity = createServerFn({ method: "POST" })
     if (handle && (handle.length < 1 || handle.length > 15 || !/^[a-zA-Z0-9_]+$/.test(handle))) {
       throw new Error("Invalid X handle");
     }
-    const { error } = await context.supabase
+    const initials = (data.display_initials ?? "")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 3)
+      .toUpperCase();
+
+    // Ownership check with the caller's own (RLS-scoped) client.
+    const { data: owned, error: readError } = await (context.supabase as any)
+      .from("pledges")
+      .select("id")
+      .eq("id", data.pledge_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    if (!owned) throw new Error("Contribution not found for your account");
+
+    // RLS on `pledges` only allows admins to update, so perform the verified
+    // identity-only write with the service client.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await (supabaseAdmin as any)
       .from("pledges")
       .update({
         x_handle: handle || null,
+        display_initials: initials || null,
         display_mode: data.display_mode,
         hide_amount: data.hide_amount,
       })
       .eq("id", data.pledge_id)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.userId)
+      .select("id, x_handle, display_mode, hide_amount, display_initials")
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    if (!updated) throw new Error("Could not save — contribution not updated");
+    return updated as any;
   });
+
 
 export const createPledgeCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
