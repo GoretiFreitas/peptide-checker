@@ -125,8 +125,33 @@ function ItemDetail() {
           setPaidAmount(res.amount_cents);
           setMemberGranted(!!res.member);
           setPledgeId(res.pledge_id ?? null);
+          // Apply the backer identity chosen before checkout, now that the pledge exists.
+          const draftRaw = window.localStorage.getItem(draftKey);
+          if (res.pledge_id && draftRaw) {
+            try {
+              const draft = JSON.parse(draftRaw);
+              updatePledgeIdentity({
+                data: {
+                  pledge_id: res.pledge_id,
+                  x_handle: draft.x_handle ?? "",
+                  display_initials: draft.display_initials ?? "",
+                  display_mode: draft.display_mode ?? "initials",
+                  hide_amount: !!draft.hide_amount,
+                },
+              })
+                .catch(() => {})
+                .finally(() => {
+                  window.localStorage.removeItem(draftKey);
+                  identityQuery.refetch();
+                  query.refetch();
+                });
+            } catch {
+              window.localStorage.removeItem(draftKey);
+            }
+          }
           query.refetch();
         }
+
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
