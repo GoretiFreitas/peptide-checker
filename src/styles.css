@@ -1,8 +1,5 @@
 @import "tailwindcss" source(none);
-/* Paths are resolved relative to this file (src/styles/styles.css), so ".."
-   is src/. The previous value "../src" resolved to src/src/, which does not
-   exist — Tailwind scanned nothing and emitted no utility classes at all. */
-@source "..";
+@source "../src";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));

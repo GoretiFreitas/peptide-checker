@@ -24,11 +24,7 @@ export function useSubscription(userId: string | null) {
     let cancelled = false;
     const load = async () => {
       const env = (() => {
-        try {
-          return getStripeEnvironment();
-        } catch {
-          return "sandbox";
-        }
+        try { return getStripeEnvironment(); } catch { return "sandbox"; }
       })();
       const { data } = await supabase
         .from("subscriptions")

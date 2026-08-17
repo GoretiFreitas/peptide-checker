@@ -9,7 +9,10 @@ export default defineTool({
   description:
     "Extract fields from a peptide Certificate of Analysis (identity, purity, endotoxins, sterility, contaminants) and return a deterministic verdict, per-field results, and flags. Accepts pasted certificate text.",
   inputSchema: {
-    text: z.string().min(20).describe("Full text of the certificate as pasted or OCR-extracted."),
+    text: z
+      .string()
+      .min(20)
+      .describe("Full text of the certificate as pasted or OCR-extracted."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ text }) => {

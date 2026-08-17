@@ -12,11 +12,15 @@ type OAuthNs = {
     } | null;
     error: { message: string } | null;
   }>;
-  approveAuthorization: (id: string) => Promise<{
+  approveAuthorization: (
+    id: string,
+  ) => Promise<{
     data: { redirect_url?: string | null; redirect_to?: string | null } | null;
     error: { message: string } | null;
   }>;
-  denyAuthorization: (id: string) => Promise<{
+  denyAuthorization: (
+    id: string,
+  ) => Promise<{
     data: { redirect_url?: string | null; redirect_to?: string | null } | null;
     error: { message: string } | null;
   }>;
@@ -45,7 +49,8 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   component: Consent,
   errorComponent: ({ error }) => (
     <main className="mx-auto max-w-md px-6 py-16 font-serif">
-      Could not load this authorization request: {String((error as Error)?.message ?? error)}
+      Could not load this authorization request:{" "}
+      {String((error as Error)?.message ?? error)}
     </main>
   ),
 });
@@ -85,8 +90,8 @@ function Consent() {
       </div>
       <h1 className="mt-3 font-serif text-3xl">Connect {clientName} to your account</h1>
       <p className="mt-4 text-sm text-muted-foreground">
-        This lets {clientName} use the Certificate Checker as you: read the testing board, nominate
-        products on your behalf, and view your pledges.
+        This lets {clientName} use the Certificate Checker as you: read the testing
+        board, nominate products on your behalf, and view your pledges.
       </p>
       {error && (
         <p role="alert" className="mt-4 text-sm text-destructive">

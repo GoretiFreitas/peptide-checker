@@ -10,10 +10,7 @@ export const Route = createFileRoute("/auth")({
       { title: "Sign in — Certificate Checker" },
       { name: "description", content: "Sign in to nominate products and back independent tests." },
       { property: "og:title", content: "Sign in — Certificate Checker" },
-      {
-        property: "og:description",
-        content: "Sign in to nominate products and back independent tests.",
-      },
+      { property: "og:description", content: "Sign in to nominate products and back independent tests." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "/auth" },
       { name: "robots", content: "noindex" },
@@ -87,11 +84,11 @@ function AuthPage() {
     }
   };
 
+
   const google = async () => {
     setError(null);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri:
-        window.location.origin + "/auth" + (next ? `?next=${encodeURIComponent(next)}` : ""),
+      redirect_uri: window.location.origin + "/auth" + (next ? `?next=${encodeURIComponent(next)}` : ""),
     });
     if (result.error) setError(String(result.error));
     if (!result.redirected && !result.error) navigate({ to: next || "/fund", replace: true });

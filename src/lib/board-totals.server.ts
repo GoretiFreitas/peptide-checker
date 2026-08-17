@@ -18,7 +18,7 @@ export async function computeFundingTotals(itemId?: string): Promise<FundingTota
   if (itemId) query = query.eq("item_id", itemId);
   const { data } = await query;
   const map = new Map<string, FundingTotal>();
-  for (const row of (data as any[]) ?? []) {
+  for (const row of ((data as any[]) ?? [])) {
     const t = map.get(row.item_id) ?? { item_id: row.item_id, pledged_cents: 0, backer_count: 0 };
     t.pledged_cents += Number(row.amount_cents ?? 0);
     t.backer_count += 1;

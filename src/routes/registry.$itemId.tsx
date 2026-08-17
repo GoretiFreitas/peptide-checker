@@ -22,9 +22,7 @@ export const Route = createFileRoute("/registry/$itemId")({
   head: ({ params, loaderData }) => {
     const name = loaderData?.productName;
     const title = name ? `${name} — Independent Test Report` : "Test Report — Certificate Checker";
-    const desc = name
-      ? `Published independent test report for ${name}.`
-      : "Published independent test report.";
+    const desc = name ? `Published independent test report for ${name}.` : "Published independent test report.";
     return {
       meta: [
         { title },
@@ -93,10 +91,9 @@ function RegistryPage() {
         signed_off_at?: string | null;
       }
     | undefined;
-  const full = (fullQ.data && "report" in fullQ.data ? fullQ.data.report : null) as {
-    item: unknown;
-    result: { raw_findings: unknown; summary: string; verdict: string };
-  } | null;
+  const full = (fullQ.data && "report" in fullQ.data ? fullQ.data.report : null) as
+    | { item: unknown; result: { raw_findings: unknown; summary: string; verdict: string } }
+    | null;
 
   const downloadJson = () => {
     if (!full) return;
@@ -113,10 +110,7 @@ function RegistryPage() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="mx-auto max-w-[820px] px-6 py-12 md:px-10">
-        <Link
-          to="/fund"
-          className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground"
-        >
+        <Link to="/fund" className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground">
           ← Fund
         </Link>
         {publicQ.isLoading && <div className="mt-6 text-sm text-muted-foreground">Loading…</div>}
@@ -125,19 +119,13 @@ function RegistryPage() {
             <div className="mt-6 text-[11px] tracking-[0.22em] uppercase text-muted-foreground">
               Independent test report
             </div>
-            <h1 className="mt-2 font-serif text-5xl tracking-tight text-foreground">
-              {item.product_name}
-            </h1>
-            {item.seller && (
-              <div className="mt-2 text-sm text-muted-foreground">Sold as — {item.seller}</div>
-            )}
+            <h1 className="mt-2 font-serif text-5xl tracking-tight text-foreground">{item.product_name}</h1>
+            {item.seller && <div className="mt-2 text-sm text-muted-foreground">Sold as — {item.seller}</div>}
 
             {publicResult ? (
               <>
                 <div className="mt-8 inline-block rounded-sm px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] uppercase">
-                  <span
-                    className={`rounded-sm px-2 py-1 ${verdictStyle[publicResult.verdict] ?? "bg-secondary"}`}
-                  >
+                  <span className={`rounded-sm px-2 py-1 ${verdictStyle[publicResult.verdict] ?? "bg-secondary"}`}>
                     Verdict — {publicResult.verdict}
                   </span>
                 </div>
@@ -150,12 +138,10 @@ function RegistryPage() {
                   </p>
                   {!hasAccess && (publicResult.summary ?? "").length > 260 && (
                     <div className="mt-4 rounded-sm border border-dashed border-border bg-secondary/40 p-4 text-xs">
-                      <p className="tracking-[0.14em] uppercase text-muted-foreground">
-                        Members only
-                      </p>
+                      <p className="tracking-[0.14em] uppercase text-muted-foreground">Members only</p>
                       <p className="mt-2 text-sm leading-relaxed text-foreground">
-                        The full summary, raw findings table, and downloadable report are available
-                        to Registry members.
+                        The full summary, raw findings table, and downloadable report are available to
+                        Registry members.
                       </p>
                       {userId ? (
                         <Link
@@ -167,12 +153,7 @@ function RegistryPage() {
                         </Link>
                       ) : (
                         <button
-                          onClick={() =>
-                            navigate({
-                              to: "/auth",
-                              search: { redirect: `/registry/${itemId}` } as any,
-                            })
-                          }
+                          onClick={() => navigate({ to: "/auth", search: { redirect: `/registry/${itemId}` } as any })}
                           className="mt-3 inline-block rounded-sm border border-foreground px-3 py-1.5 text-[11px] tracking-[0.18em] uppercase hover:bg-foreground hover:text-background"
                         >
                           Sign in
@@ -184,25 +165,17 @@ function RegistryPage() {
 
                 <dl className="mt-6 grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                   <div>
-                    <dt className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-                      Lab
-                    </dt>
+                    <dt className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Lab</dt>
                     <dd className="mt-1 text-foreground">{publicResult.lab_name ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-                      Batch
-                    </dt>
+                    <dt className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Batch</dt>
                     <dd className="mt-1 text-foreground">{publicResult.batch_id ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-                      Signed off
-                    </dt>
+                    <dt className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Signed off</dt>
                     <dd className="mt-1 text-foreground">
-                      {publicResult.signed_off_at
-                        ? new Date(publicResult.signed_off_at).toLocaleDateString()
-                        : "—"}
+                      {publicResult.signed_off_at ? new Date(publicResult.signed_off_at).toLocaleDateString() : "—"}
                     </dd>
                   </div>
                 </dl>

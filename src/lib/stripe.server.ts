@@ -10,51 +10,10 @@ export type StripeEnv = "sandbox" | "live";
 
 const GATEWAY_STRIPE_BASE = "https://connector-gateway.lovable.dev/stripe";
 
-let _resolvedEnv: StripeEnv | undefined;
-
-/**
- * The payments environment is a property of the *deployment*, never of the
- * request. It must never be taken from the client: a caller who can choose
- * "sandbox" can pay with a test card and still be granted the real entitlement.
- *
- * Resolution order:
- *   1. PAYMENTS_ENVIRONMENT ("live" | "sandbox") — explicit wins.
- *   2. The publishable client token prefix (pk_live_ / pk_test_).
- *   3. Whichever secret key is configured, when exactly one of the two is.
- */
-export function resolvePaymentsEnv(): StripeEnv {
-  if (_resolvedEnv) return _resolvedEnv;
-
-  const explicit = process.env.PAYMENTS_ENVIRONMENT?.trim().toLowerCase();
-  if (explicit === "live" || explicit === "sandbox") {
-    _resolvedEnv = explicit;
-    return _resolvedEnv;
-  }
-
-  const token = process.env.VITE_PAYMENTS_CLIENT_TOKEN?.trim();
-  if (token?.startsWith("pk_live_")) {
-    _resolvedEnv = "live";
-    return _resolvedEnv;
-  }
-  if (token?.startsWith("pk_test_")) {
-    _resolvedEnv = "sandbox";
-    return _resolvedEnv;
-  }
-
-  const hasLive = !!process.env.STRIPE_LIVE_API_KEY;
-  const hasSandbox = !!process.env.STRIPE_SANDBOX_API_KEY;
-  if (hasLive !== hasSandbox) {
-    _resolvedEnv = hasLive ? "live" : "sandbox";
-    return _resolvedEnv;
-  }
-
-  throw new Error(
-    "Payments environment is ambiguous. Set PAYMENTS_ENVIRONMENT to 'live' or 'sandbox'.",
-  );
-}
-
 export function getConnectionApiKey(env: StripeEnv): string {
-  return env === "sandbox" ? getEnv("STRIPE_SANDBOX_API_KEY") : getEnv("STRIPE_LIVE_API_KEY");
+  return env === "sandbox"
+    ? getEnv("STRIPE_SANDBOX_API_KEY")
+    : getEnv("STRIPE_LIVE_API_KEY");
 }
 
 export function createStripeClient(env: StripeEnv): Stripe {
@@ -93,25 +52,10 @@ export function getStripeErrorMessage(error: unknown): string {
   return "Stripe request failed";
 }
 
-function toHex(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let hex = "";
-  for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, "0");
-  return hex;
-}
-
-/** Length-independent constant-time string compare. */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
 export async function verifyWebhook(
   req: Request,
   env: StripeEnv,
-): Promise<{ id: string; type: string; data: { object: any } }> {
+): Promise<{ type: string; data: { object: any } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
   const secret =
@@ -144,13 +88,8 @@ export async function verifyWebhook(
     key,
     new TextEncoder().encode(`${timestamp}.${body}`),
   );
-  // Buffer is not available on every worker runtime — hex-encode manually.
-  const expected = toHex(signed);
-  if (!v1Signatures.some((candidate) => timingSafeEqual(candidate, expected))) {
-    throw new Error("Invalid webhook signature");
-  }
+  const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
+  if (!v1Signatures.includes(expected)) throw new Error("Invalid webhook signature");
 
-  const event = JSON.parse(body) as { id?: string; type?: string; data?: { object: any } };
-  if (!event?.id || !event.type) throw new Error("Malformed webhook payload");
-  return event as { id: string; type: string; data: { object: any } };
+  return JSON.parse(body);
 }

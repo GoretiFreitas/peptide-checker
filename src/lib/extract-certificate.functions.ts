@@ -4,23 +4,11 @@ import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 import { extractedCertificateSchema, NR, type ExtractedCertificate } from "./certificate-types";
 
-// Server-side caps. The dropzone enforces 12MB in the browser, but that check
-// is advisory only — this endpoint is reachable directly.
-const MAX_FILE_BYTES = 12 * 1024 * 1024;
-const MAX_BASE64_CHARS = Math.ceil(MAX_FILE_BYTES / 3) * 4;
-const MAX_TEXT_CHARS = 200_000;
-
-const ALLOWED_MIME = /^(image\/(png|jpe?g|webp|gif|heic|heif)|application\/pdf)$/i;
-
 const inputSchema = z.object({
-  text: z.string().max(MAX_TEXT_CHARS, "Certificate text is too long.").optional(),
-  fileBase64: z.string().max(MAX_BASE64_CHARS, "File exceeds the 12MB limit.").optional(),
-  fileMime: z
-    .string()
-    .max(120)
-    .regex(ALLOWED_MIME, "Only image or PDF files are accepted.")
-    .optional(),
-  fileName: z.string().max(300).optional(),
+  text: z.string().optional(),
+  fileBase64: z.string().optional(),
+  fileMime: z.string().optional(),
+  fileName: z.string().optional(),
 });
 
 const SYSTEM = `You transcribe peptide Certificate of Analysis (CoA) documents.
@@ -71,34 +59,10 @@ const EMPTY: ExtractedCertificate = {
 };
 
 export const extractCertificate = createServerFn({ method: "POST" })
-  .validator((input: unknown) => inputSchema.parse(input))
+  .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }): Promise<ExtractedCertificate> => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI service is not configured.");
-
-    // This endpoint spends metered AI credits and is intentionally public (the
-    // landing-page checker must work without an account), so it is rate limited
-    // per caller. Signed-in callers get a larger budget.
-    const { callerIp, enforceRateLimit, optionalUserId } = await import("@/lib/rate-limit.server");
-    const userId = await optionalUserId();
-    await enforceRateLimit(
-      userId
-        ? {
-            name: "extract-certificate:user",
-            key: userId,
-            limit: 40,
-            windowSeconds: 3600,
-            message: "You have reached the hourly limit for certificate checks. Try again shortly.",
-          }
-        : {
-            name: "extract-certificate:ip",
-            key: callerIp(),
-            limit: 8,
-            windowSeconds: 3600,
-            message:
-              "Too many certificate checks from this network. Sign in for a higher limit, or try again later.",
-          },
-    );
 
     const hasFile = !!(data.fileBase64 && data.fileMime);
     const hasText = !!(data.text && data.text.trim().length > 0);
@@ -139,6 +103,7 @@ export const extractCertificate = createServerFn({ method: "POST" })
       });
       return output;
     } catch (error) {
+
       if (NoObjectGeneratedError.isInstance(error)) {
         console.error("Structured extraction failed:", error.text);
         try {

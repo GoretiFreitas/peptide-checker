@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { lookupRegister } from "@/lib/register.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 
+
 export const Route = createFileRoute("/verify")({
   head: () => ({
     meta: [
@@ -16,7 +17,8 @@ export const Route = createFileRoute("/verify")({
       { property: "og:title", content: "Verify a batch — PeptidesCheck" },
       {
         property: "og:description",
-        content: "Look up a batch or SHA-256 hash in the PeptidesCheck Authenticity Register.",
+        content:
+          "Look up a batch or SHA-256 hash in the PeptidesCheck Authenticity Register.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://peptidescheck.xyz/verify" },
@@ -82,7 +84,9 @@ function VerifyPage() {
 
         <div className="mt-10">
           {mutation.isError && (
-            <div className="text-sm text-destructive">{(mutation.error as Error).message}</div>
+            <div className="text-sm text-destructive">
+              {(mutation.error as Error).message}
+            </div>
           )}
           {mutation.data && <VerifyResult data={mutation.data} />}
         </div>
@@ -92,18 +96,9 @@ function VerifyPage() {
             How to read results
           </div>
           <ul className="mt-3 space-y-2 text-sm text-foreground">
-            <li>
-              <strong>Registered and unaltered.</strong> The exact certificate content matches an
-              existing register entry.
-            </li>
-            <li>
-              <strong>Seen before under a different batch.</strong> The batch identifier appears
-              more than once with different contents. Treat with caution.
-            </li>
-            <li>
-              <strong>Not in the register.</strong> No matching submission. This does not mean the
-              certificate is fake, only that no one has run it through PeptidesCheck yet.
-            </li>
+            <li><strong>Registered and unaltered.</strong> The exact certificate content matches an existing register entry.</li>
+            <li><strong>Seen before under a different batch.</strong> The batch identifier appears more than once with different contents. Treat with caution.</li>
+            <li><strong>Not in the register.</strong> No matching submission. This does not mean the certificate is fake, only that no one has run it through PeptidesCheck yet.</li>
           </ul>
         </div>
 

@@ -62,9 +62,7 @@ function NominatePage() {
       if (!data.user) {
         navigate({
           to: "/auth",
-          search: {
-            next: `/fund/nominate${product ? `?product=${encodeURIComponent(product)}` : ""}`,
-          },
+          search: { next: `/fund/nominate${product ? `?product=${encodeURIComponent(product)}` : ""}` },
           replace: true,
         });
       } else {
@@ -74,7 +72,9 @@ function NominatePage() {
   }, [navigate, product]);
 
   const toggleTest = (key: string) => {
-    setTests((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setTests((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
   };
 
   const changeLab = (next: Lab) => {
@@ -211,9 +211,10 @@ function NominatePage() {
 
           <div className="rounded-sm border border-border bg-card p-3 text-sm leading-relaxed text-muted-foreground">
             A small initial pledge — even{" "}
-            <span className="font-medium text-foreground">$5 USD</span> — from the person nominating
-            the batch helps set the example and signals genuine interest to other backers. It is
-            entirely optional, but campaigns that start with a first backer tend to fund faster.
+            <span className="font-medium text-foreground">$5 USD</span> — from the person
+            nominating the batch helps set the example and signals genuine interest to other
+            backers. It is entirely optional, but campaigns that start with a first backer tend to
+            fund faster.
           </div>
 
           <label className="flex items-start gap-3 rounded-sm border border-border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
@@ -224,18 +225,17 @@ function NominatePage() {
               className="mt-0.5 h-4 w-4"
             />
             <span>
-              I consent to Descier Science storing the information above so administrators can
-              review this nomination. Data is handled in line with Data Protection Laws ( LGPD and
-              GDPR).
+              I consent to Descier Science storing the information above so administrators can review
+              this nomination. Data is handled in line with Data Protection Laws ( LGPD and GDPR).
             </span>
           </label>
           {submit.isError && (
-            <div className="text-sm text-destructive">{(submit.error as Error).message}</div>
+            <div className="text-sm text-destructive">
+              {(submit.error as Error).message}
+            </div>
           )}
           <button
-            disabled={
-              submit.isPending || productName.trim().length < 2 || !consent || tests.length === 0
-            }
+            disabled={submit.isPending || productName.trim().length < 2 || !consent || tests.length === 0}
             className="rounded-sm bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background disabled:opacity-40"
           >
             {submit.isPending ? "…" : "Submit nomination"}

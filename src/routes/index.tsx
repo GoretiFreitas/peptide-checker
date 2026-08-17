@@ -137,11 +137,7 @@ function Index() {
         message: mutation.error instanceof Error ? mutation.error.message : "Unknown error",
       };
     if (mutation.data)
-      return {
-        kind: "ok",
-        result: mutation.data.analysis,
-        registerInfo: mutation.data.registerInfo,
-      };
+      return { kind: "ok", result: mutation.data.analysis, registerInfo: mutation.data.registerInfo };
     return { kind: "idle" };
   }, [mutation.isPending, mutation.isError, mutation.error, mutation.data]);
 
@@ -278,8 +274,8 @@ function Index() {
               image, Portable Document Format (PDF), or pasted text. This step is heuristic.
             </Step>
             <Step n={2} title="Score with rules">
-              Extracted fields are scored deterministically. Purity thresholds, missing safety
-              tests, and internal inconsistencies are rule-based, not AI opinions.
+              Extracted fields are scored deterministically. Purity thresholds, missing safety tests,
+              and internal inconsistencies are rule-based, not AI opinions.
             </Step>
             <Step n={3} title="Hash and cross-reference">
               The exact submitted content is hashed with the Secure Hash Algorithm 256-bit (SHA-256)
@@ -304,10 +300,10 @@ function Index() {
             Every check leaves a durable trace.
           </h2>
           <p className="mt-4 max-w-[70ch] text-sm leading-relaxed text-foreground md:text-base">
-            Each certificate is hashed with SHA-256 and recorded in an append-only register. Entries
-            cannot be edited or deleted. That lets the tool detect the same certificate being reused
-            for a different batch, or the same batch identifier arriving with different content,
-            which a single document reading cannot catch.
+            Each certificate is hashed with SHA-256 and recorded in an append-only register.
+            Entries cannot be edited or deleted. That lets the tool detect the same certificate being
+            reused for a different batch, or the same batch identifier arriving with different
+            content, which a single document reading cannot catch.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -340,8 +336,8 @@ function Index() {
               which are the parts that make an injectable dangerous.
             </Limit>
             <Limit>
-              For anything intended to go near a person, independent laboratory testing of the
-              actual material is required. This tool does not replace it.
+              For anything intended to go near a person, independent laboratory testing of the actual
+              material is required. This tool does not replace it.
             </Limit>
           </ul>
         </div>
@@ -429,9 +425,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
       </div>
       <div>
         <div className="text-sm font-medium text-foreground">{title}</div>
-        <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-          {children}
-        </p>
+        <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">{children}</p>
       </div>
     </li>
   );

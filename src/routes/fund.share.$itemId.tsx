@@ -122,11 +122,7 @@ function SharePage() {
     ctx.fillText(`${money(pledged)} of ${money(goal)}`, 80, 740);
     ctx.fillStyle = "#5A5A5A";
     ctx.font = "400 30px Inter, sans-serif";
-    ctx.fillText(
-      `${pct}% funded · ${(totals?.backers as number) ?? 0} backer${((totals?.backers as number) ?? 0) === 1 ? "" : "s"}`,
-      80,
-      790,
-    );
+    ctx.fillText(`${pct}% funded · ${(totals?.backers as number) ?? 0} backer${((totals?.backers as number) ?? 0) === 1 ? "" : "s"}`, 80, 790);
 
     ctx.fillStyle = "#6B6B6B";
     ctx.font = "400 26px Inter, sans-serif";
@@ -149,9 +145,7 @@ function SharePage() {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.warn("Clipboard copy failed:", err);
-    }
+    } catch {}
   };
 
   if (!item) {
@@ -160,9 +154,7 @@ function SharePage() {
         <SiteHeader />
         <div className="mx-auto max-w-[900px] px-6 py-12">
           <div className="text-sm text-muted-foreground">Campaign not found.</div>
-          <Link to="/fund" className="mt-4 inline-block text-sm underline">
-            ← Back to fund
-          </Link>
+          <Link to="/fund" className="mt-4 inline-block text-sm underline">← Back to fund</Link>
         </div>
       </div>
     );
@@ -172,26 +164,17 @@ function SharePage() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="mx-auto max-w-[900px] px-6 py-10 md:px-10">
-        <Link
-          to="/fund/$itemId"
-          params={{ itemId }}
-          className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground"
-        >
+        <Link to="/fund/$itemId" params={{ itemId }} className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground hover:text-foreground">
           ← Campaign
         </Link>
-        <h1 className="mt-6 font-serif text-4xl tracking-tight text-foreground">
-          Share this campaign
-        </h1>
+        <h1 className="mt-6 font-serif text-4xl tracking-tight text-foreground">Share this campaign</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {productName}
-          {batchId ? ` · batch ${batchId}` : ""}
+          {productName}{batchId ? ` · batch ${batchId}` : ""}
         </p>
 
         <div className="mt-8 space-y-6">
           <section className="rounded-sm border border-border bg-card p-6">
-            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-              X / Twitter
-            </div>
+            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">X / Twitter</div>
             <textarea
               readOnly
               value={xText}
@@ -208,14 +191,10 @@ function SharePage() {
           </section>
 
           <section className="rounded-sm border border-border bg-card p-6">
-            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-              Reddit
-            </div>
+            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Reddit</div>
             <div className="mt-3 grid gap-3">
               <div>
-                <label className="block text-[11px] tracking-[0.14em] uppercase text-muted-foreground">
-                  Subreddit
-                </label>
+                <label className="block text-[11px] tracking-[0.14em] uppercase text-muted-foreground">Subreddit</label>
                 <div className="mt-1 flex items-center rounded-sm border border-border bg-background px-3">
                   <span className="text-sm text-muted-foreground">r/</span>
                   <input
@@ -248,9 +227,7 @@ function SharePage() {
           </section>
 
           <section className="rounded-sm border border-border bg-card p-6">
-            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-              Instagram
-            </div>
+            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Instagram</div>
             <p className="mt-2 text-sm text-muted-foreground">
               Download this card and share it in a story or post.
             </p>
@@ -278,9 +255,7 @@ function SharePage() {
           </section>
 
           <section className="rounded-sm border border-border bg-card p-6">
-            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-              Copy link
-            </div>
+            <div className="text-[11px] tracking-[0.18em] uppercase text-muted-foreground">Copy link</div>
             <div className="mt-3 flex items-center gap-2">
               <input
                 readOnly

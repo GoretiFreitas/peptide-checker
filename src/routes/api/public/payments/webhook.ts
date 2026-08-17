@@ -1,48 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  verifyWebhook,
-  type StripeEnv,
-  createStripeClient,
-  resolvePaymentsEnv,
-} from "@/lib/stripe.server";
+import { verifyWebhook, type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 
 async function getAdmin() {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin as any;
-}
-
-/**
- * Claim an event id. Returns false when this event was already processed, so a
- * Stripe redelivery (which happens on every non-2xx, and spontaneously) can
- * never re-run a non-idempotent side effect such as crediting the fund.
- */
-async function claimEvent(eventId: string, type: string, env: StripeEnv): Promise<boolean> {
-  const admin = await getAdmin();
-  const { error } = await admin
-    .from("stripe_webhook_events")
-    .insert({ event_id: eventId, type, environment: env });
-  if (!error) return true;
-  // 23505 = unique_violation → we have seen this event before.
-  if (error.code === "23505") return false;
-  throw new Error(`Could not record webhook event: ${error.message}`);
-}
-
-/** Undo a claim so a failed event can be retried by Stripe. */
-async function releaseEvent(eventId: string): Promise<void> {
-  try {
-    const admin = await getAdmin();
-    await admin.from("stripe_webhook_events").delete().eq("event_id", eventId);
-  } catch (error) {
-    console.error("Could not release webhook event claim", eventId, error);
-  }
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
 // ------- Entitlement helpers -------
 
 async function grantRole(admin: any, userId: string, role: "supporter" | "registry_member") {
-  await admin
-    .from("user_roles")
-    .upsert({ user_id: userId, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
+  await admin.from("user_roles").upsert(
+    { user_id: userId, role },
+    { onConflict: "user_id,role", ignoreDuplicates: true },
+  );
 }
 async function revokeRole(admin: any, userId: string, role: "supporter" | "registry_member") {
   await admin.from("user_roles").delete().eq("user_id", userId).eq("role", role);
@@ -50,9 +20,13 @@ async function revokeRole(admin: any, userId: string, role: "supporter" | "regis
 
 async function creditFund(admin: any, deltaCents: number, note: string, meta: any) {
   if (!deltaCents) return;
-  // Atomic increment — a read-modify-write here loses concurrent donations.
-  const { error } = await admin.rpc("credit_community_fund", { p_delta_cents: deltaCents });
-  if (error) throw new Error(`Could not credit community fund: ${error.message}`);
+  // Read-modify-write; single-row table
+  const { data } = await admin.from("community_fund").select("total_cents").eq("id", true).single();
+  const current = Number(data?.total_cents ?? 0);
+  await admin
+    .from("community_fund")
+    .update({ total_cents: current + deltaCents, updated_at: new Date().toISOString() })
+    .eq("id", true);
   await admin.from("admin_activity").insert({
     kind: "fund_credit",
     message: `${deltaCents >= 0 ? "Credited" : "Debited"} ${(deltaCents / 100).toFixed(2)} USD — ${note}`,
@@ -63,9 +37,7 @@ async function creditFund(admin: any, deltaCents: number, note: string, meta: an
 // ------- Subscription handlers -------
 
 function priceLookup(item: any): string | null {
-  return (
-    item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null
-  );
+  return item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
 }
 
 async function upsertSubscription(subscription: any, env: StripeEnv) {
@@ -77,8 +49,9 @@ async function upsertSubscription(subscription: any, env: StripeEnv) {
   }
   const item = subscription.items?.data?.[0];
   const priceId = priceLookup(item);
-  const productId =
-    typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id;
+  const productId = typeof item?.price?.product === "string"
+    ? item.price.product
+    : item?.price?.product?.id;
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
@@ -139,20 +112,14 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 
 // ------- One-time purchase handling (donations, registry) -------
 
-async function handleCheckoutSessionCompleted(
-  session: any,
-  env: StripeEnv,
-  stripeEnvKey: StripeEnv,
-) {
+async function handleCheckoutSessionCompleted(session: any, env: StripeEnv, stripeEnvKey: StripeEnv) {
   // Fund contributions live under board.functions and use `metadata.pledge_id`.
   const pledgeId = session.metadata?.pledge_id;
   if (pledgeId) {
     if (session.payment_status === "unpaid") return;
     const admin = await getAdmin();
     const paymentIntentId =
-      typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id;
+      typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
 
     // Which payment method the backer used (card, crypto, ...) for the audit trail.
     let methodType: string | null = null;
@@ -180,8 +147,7 @@ async function handleCheckoutSessionCompleted(
         payment_method_type: methodType,
         environment: env,
       })
-      .eq("id", pledgeId)
-      .neq("status", "refunded");
+      .eq("id", pledgeId);
 
     // Backing a pool with $5 or more grants membership (supporter role).
     const backerUserId = session.metadata?.user_id;
@@ -197,6 +163,7 @@ async function handleCheckoutSessionCompleted(
     return;
   }
 
+
   // Subscription checkouts: the subscription.created event will handle entitlement.
   if (session.mode !== "payment") return;
 
@@ -210,10 +177,8 @@ async function handleCheckoutSessionCompleted(
   });
   const line = full.line_items?.data?.[0];
   const priceObj: any = line?.price;
-  const priceLookupKey =
-    priceObj?.lookup_key || priceObj?.metadata?.lovable_external_id || priceObj?.id || null;
-  const productId =
-    typeof priceObj?.product === "string" ? priceObj.product : priceObj?.product?.id;
+  const priceLookupKey = priceObj?.lookup_key || priceObj?.metadata?.lovable_external_id || priceObj?.id || null;
+  const productId = typeof priceObj?.product === "string" ? priceObj.product : priceObj?.product?.id;
 
   const pi: any = full.payment_intent;
   const paymentIntentId = typeof pi === "string" ? pi : pi?.id;
@@ -227,31 +192,15 @@ async function handleCheckoutSessionCompleted(
 
   const amount = Number(full.amount_total ?? 0);
   let kind: "donation" | "registry" | "other" = "other";
-  if (productId === "community_donation" || String(priceLookupKey).startsWith("donate_"))
-    kind = "donation";
-  else if (
-    productId === "registry_access" ||
-    priceLookupKey === "registry_full_500" ||
-    priceLookupKey === "registry_lifetime"
-  )
-    kind = "registry";
-
-  // Was this session already credited to the fund? Guards redeliveries that
-  // predate the event ledger, and two distinct events touching one session.
-  const { data: priorPurchase } = await admin
-    .from("purchases")
-    .select("credited_to_fund")
-    .eq("stripe_checkout_session_id", session.id)
-    .maybeSingle();
-  const alreadyCredited = !!priorPurchase?.credited_to_fund;
+  if (productId === "community_donation" || String(priceLookupKey).startsWith("donate_")) kind = "donation";
+  else if (productId === "registry_access" || priceLookupKey === "registry_full_500" || priceLookupKey === "registry_lifetime") kind = "registry";
 
   await admin.from("purchases").upsert(
     {
       user_id: userId ?? null,
       stripe_checkout_session_id: session.id,
       stripe_payment_intent_id: paymentIntentId ?? null,
-      stripe_customer_id:
-        typeof session.customer === "string" ? session.customer : session.customer?.id,
+      stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id,
       product_id: productId ?? "unknown",
       price_id: priceLookupKey,
       kind,
@@ -277,7 +226,7 @@ async function handleCheckoutSessionCompleted(
   }
 
   // Donations: credit the community fund (net of Stripe fees when available)
-  if (kind === "donation" && !alreadyCredited) {
+  if (kind === "donation") {
     const credit = netCents ?? amount;
     await admin
       .from("purchases")
@@ -289,8 +238,7 @@ async function handleCheckoutSessionCompleted(
 
 async function handleChargeRefunded(charge: any, env: StripeEnv) {
   const admin = await getAdmin();
-  const pi =
-    typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
   if (!pi) return;
   const refunded = Number(charge.amount_refunded ?? 0);
   const total = Number(charge.amount ?? 0);
@@ -306,6 +254,8 @@ async function handleChargeRefunded(charge: any, env: StripeEnv) {
     })
     .eq("stripe_payment_intent_id", pi)
     .eq("environment", env);
+
+
 
   const { data: purchase } = await admin
     .from("purchases")
@@ -354,21 +304,11 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
     typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
   if (!subscriptionId) return; // one-off invoices handled via checkout.session.completed
   const paymentIntentId =
-    typeof invoice.payment_intent === "string"
-      ? invoice.payment_intent
-      : invoice.payment_intent?.id;
+    typeof invoice.payment_intent === "string" ? invoice.payment_intent : invoice.payment_intent?.id;
   if (!paymentIntentId) return;
 
   const admin = await getAdmin();
   const stripe = createStripeClient(stripeEnvKey);
-
-  // Guard the fund credit against redelivery of this invoice.
-  const { data: priorPurchase } = await admin
-    .from("purchases")
-    .select("credited_to_fund")
-    .eq("stripe_payment_intent_id", paymentIntentId)
-    .maybeSingle();
-  const alreadyCredited = !!priorPurchase?.credited_to_fund;
 
   // Pull userId from the subscription (most reliable place we set it)
   const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
@@ -385,10 +325,7 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
 
   const item = sub.items?.data?.[0];
   const priceLookup =
-    item?.price?.lookup_key ||
-    item?.price?.metadata?.lovable_external_id ||
-    item?.price?.id ||
-    null;
+    item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
   const productId =
     typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id;
 
@@ -401,8 +338,7 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
       user_id: userId,
       stripe_payment_intent_id: paymentIntentId,
       stripe_checkout_session_id: null,
-      stripe_customer_id:
-        typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id,
+      stripe_customer_id: typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id,
       product_id: productId ?? "supporter_membership",
       price_id: priceLookup,
       kind: "subscription_charge",
@@ -426,7 +362,7 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
     return;
   }
 
-  if (fundCredit > 0 && !alreadyCredited) {
+  if (fundCredit > 0) {
     await creditFund(admin, fundCredit, "supporter membership (60% share)", {
       invoice_id: invoice.id,
       subscription_id: subscriptionId,
@@ -461,22 +397,20 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
 
   switch (event.type) {
     case "payment_intent.succeeded":
-      // Never resurrect a refunded contribution: events can arrive out of order.
       await admin
         .from("pledges")
         .update({ status: "paid", stripe_payment_intent_id: obj.id, environment: env })
-        .eq("id", pledgeId)
-        .neq("status", "refunded");
+        .eq("id", pledgeId);
       break;
     case "payment_intent.canceled":
     case "payment_intent.payment_failed":
       await admin
         .from("pledges")
         .update({ status: event.type === "payment_intent.canceled" ? "cancelled" : "failed" })
-        .eq("id", pledgeId)
-        .not("status", "in", "(paid,refunded)");
+        .eq("id", pledgeId);
       break;
   }
+
 }
 
 // ------- Dispatcher -------
@@ -522,30 +456,9 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
         if (rawEnv !== "sandbox" && rawEnv !== "live") {
           return Response.json({ received: true, ignored: "invalid env" });
         }
-
-        // A sandbox event must never move state in a live deployment (or the
-        // reverse): a test-mode payment would otherwise grant a real entitlement.
-        // 200 so Stripe stops retrying an event we will never act on.
-        if (rawEnv !== resolvePaymentsEnv()) {
-          return Response.json({ received: true, ignored: "environment mismatch" });
-        }
-
         try {
           const event = await verifyWebhook(request, rawEnv);
-
-          if (!(await claimEvent(event.id, event.type, rawEnv))) {
-            return Response.json({ received: true, deduplicated: true });
-          }
-
-          try {
-            await handleEvent(event, rawEnv);
-          } catch (handlerError) {
-            // Release the claim so Stripe's retry is allowed to re-run this
-            // event; otherwise a transient failure would drop it permanently.
-            await releaseEvent(event.id);
-            throw handlerError;
-          }
-
+          await handleEvent(event, rawEnv);
           return Response.json({ received: true });
         } catch (e) {
           console.error("Webhook error", e);

@@ -1,17 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import {
-  getItem,
-  createPledgeCheckout,
-  confirmPledgeSession,
-  updatePledgeIdentity,
-  getMyPledgeIdentity,
-} from "@/lib/board.functions";
-
+  EmbeddedCheckoutProvider,
+  EmbeddedCheckout,
+} from "@stripe/react-stripe-js";
+import { getItem, createPledgeCheckout, confirmPledgeSession, updatePledgeIdentity } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getStripe } from "@/lib/stripe-client";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/hooks/useMembership";
 import { BackerList } from "@/components/fund/BackerList";
@@ -90,16 +86,9 @@ function ItemDetail() {
   const [memberGranted, setMemberGranted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
-  const identityFn = useServerFn(getMyPledgeIdentity);
-  const identityQuery = useQuery({
-    queryKey: ["pledge-identity", itemId, signedIn, pledgeId],
-    enabled: signedIn,
-    queryFn: () => identityFn({ data: { item_id: itemId } }),
-  });
-  const identity = identityQuery.data as any;
+
 
   const storageKey = `pledge_session_${itemId}`;
-  const draftKey = `pledge_identity_${itemId}`;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
@@ -115,7 +104,7 @@ function ItemDetail() {
     const sid = returnedSession ?? stored;
     if (!sid) return;
     setConfirming(true);
-    confirmPledgeSession({ data: { session_id: sid } })
+    confirmPledgeSession({ data: { session_id: sid, environment: getStripeEnvironment() } })
       .then((res) => {
         if (cancelled) return;
         if (res.paid) {
@@ -123,32 +112,9 @@ function ItemDetail() {
           setPaidAmount(res.amount_cents);
           setMemberGranted(!!res.member);
           setPledgeId(res.pledge_id ?? null);
-          // Apply the backer identity chosen before checkout, now that the pledge exists.
-          const draftRaw = window.localStorage.getItem(draftKey);
-          if (res.pledge_id && draftRaw) {
-            try {
-              const draft = JSON.parse(draftRaw);
-              updatePledgeIdentity({
-                data: {
-                  pledge_id: res.pledge_id,
-                  x_handle: draft.x_handle ?? "",
-                  display_initials: draft.display_initials ?? "",
-                  display_mode: draft.display_mode ?? "initials",
-                  hide_amount: !!draft.hide_amount,
-                },
-              })
-                .catch(() => {})
-                .finally(() => {
-                  window.localStorage.removeItem(draftKey);
-                  identityQuery.refetch();
-                  query.refetch();
-                });
-            } catch {
-              window.localStorage.removeItem(draftKey);
-            }
-          }
           query.refetch();
         }
+
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
@@ -165,6 +131,7 @@ function ItemDetail() {
           item_id: itemId,
           amount_cents: amount,
           return_url: `${window.location.origin}/fund/${itemId}?pledged=1&session_id={CHECKOUT_SESSION_ID}`,
+          environment: getStripeEnvironment(),
         },
       });
       if ("error" in res) throw new Error(res.error);
@@ -259,10 +226,10 @@ function ItemDetail() {
               {item.batch_id ? ` · batch ${item.batch_id}` : ""}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
-              You contributed {paidAmount ? money(paidAmount) : money(amount)}. If this batch
-              reaches its {money(goal)} goal, it goes to an independent lab and results are
-              published for every backer. If the goal is not met by the deadline, your contribution
-              rolls over to the most-backed active campaign.
+              You contributed {paidAmount ? money(paidAmount) : money(amount)}. If this batch reaches
+              its {money(goal)} goal, it goes to an independent lab and results are published for
+              every backer. If the goal is not met by the deadline, your contribution rolls over to
+              the most-backed active campaign.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
@@ -291,19 +258,14 @@ function ItemDetail() {
                 </p>
               </div>
             )}
+
           </div>
         )}
 
-        {signedIn && (identity?.id || pledgeId) && (
+        {(paidAmount !== null || justPledged) && signedIn && pledgeId && (
           <PledgeIdentityForm
-            key={identity?.id ?? pledgeId}
-            pledgeId={identity?.id ?? pledgeId!}
-            initial={{
-              x_handle: identity?.x_handle ?? null,
-              display_initials: identity?.display_initials ?? null,
-              display_mode: (identity?.display_mode as any) ?? "initials",
-              hide_amount: identity?.hide_amount ?? false,
-            }}
+            pledgeId={pledgeId}
+            initial={{ display_mode: "initials", hide_amount: false }}
           />
         )}
 
@@ -443,31 +405,13 @@ function ItemDetail() {
                   disabled={pledge.isPending || amount < 500}
                   className="mt-5 rounded-sm bg-foreground px-6 py-3 text-[11px] font-medium tracking-[0.22em] uppercase text-background disabled:opacity-40"
                 >
-                  {pledge.isPending
-                    ? "…"
-                    : signedIn
-                      ? `Contribute ${money(amount)}`
-                      : "Sign in to contribute"}
+                  {pledge.isPending ? "…" : signedIn ? `Contribute ${money(amount)}` : "Sign in to contribute"}
                 </button>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Card and crypto (USDC) accepted.
                 </p>
-                {signedIn && (
-                  <PledgeIdentityForm
-                    key={identity?.id ?? "draft"}
-                    pledgeId={identity?.id ?? null}
-                    draftKey={draftKey}
-                    initial={{
-                      x_handle: identity?.x_handle ?? null,
-                      display_initials: identity?.display_initials ?? null,
-                      display_mode: (identity?.display_mode as any) ?? "initials",
-                      hide_amount: identity?.hide_amount ?? false,
-                    }}
-                  />
-                )}
               </>
             )}
-
             {clientSecret && (
               <div className="mt-6">
                 <EmbeddedCheckoutProvider
@@ -488,8 +432,7 @@ function ItemDetail() {
             </div>
             <p className="mt-3 whitespace-pre-line text-sm text-foreground">{result.summary}</p>
             <div className="mt-4 text-[11px] tracking-[0.14em] uppercase text-muted-foreground">
-              Signed off{" "}
-              {result.signed_off_at ? new Date(result.signed_off_at).toLocaleDateString() : "—"}
+              Signed off {result.signed_off_at ? new Date(result.signed_off_at).toLocaleDateString() : "—"}
               {result.lab_name ? ` · ${result.lab_name}` : ""}
               {result.batch_id ? ` · batch ${result.batch_id}` : ""}
             </div>
@@ -508,8 +451,9 @@ function ItemDetail() {
         </div>
 
         <div className="mt-10 rounded-sm border border-border bg-background p-4 text-xs leading-relaxed text-muted-foreground">
-          This describes an independent test of a specific batch of a product. It is not a statement
-          that the product is safe to inject or consume, or that it is effective or approved.
+          This describes an independent test of a specific batch of a product. It is not a
+          statement that the product is safe to inject or consume, or that it is effective or
+          approved.
         </div>
       </main>
     </div>
