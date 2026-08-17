@@ -1,0 +1,1 @@
+DELETE FROM public.pledges WHERE id IN ('72ba9b9c-6b83-4922-85c9-80d22b4e4759','d6b3cb77-8df6-4f52-bf6c-fd2b21f81ba7','ce79004e-6d84-459c-abce-a811f362e981','27f3090b-9fd2-4aad-bfa8-e71665e2e79e','9af562ba-b775-49e9-a125-703e304b91ea');
