@@ -32,7 +32,7 @@ export async function fetchProfileHandles(
 export async function listCampaignBackers(itemId: string): Promise<CampaignBacker[]> {
   const { data: rows, error } = await (supabaseAdmin as any)
     .from("pledges")
-    .select("id, amount_cents, created_at, user_id, x_handle, display_mode, hide_amount")
+    .select("id, amount_cents, created_at, user_id, x_handle, display_mode, display_initials, hide_amount")
     .eq("item_id", itemId)
     .in("status", ["paid", "captured", "authorized"])
     .order("created_at", { ascending: false })
@@ -46,7 +46,8 @@ export async function listCampaignBackers(itemId: string): Promise<CampaignBacke
     const mode = (r.display_mode ?? "initials") as CampaignBacker["display_mode"];
     const xHandle = typeof r.x_handle === "string" ? r.x_handle.trim() : null;
     const profileHandle = handles[r.user_id] ?? null;
-    const initials = (profileHandle?.[0] ?? "?").toUpperCase();
+    const custom = typeof r.display_initials === "string" ? r.display_initials.trim() : "";
+    const initials = (custom || profileHandle?.[0] || "?").toUpperCase();
     return {
       id: r.id as string,
       created_at: r.created_at as string,
