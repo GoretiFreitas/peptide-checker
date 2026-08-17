@@ -1,9 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { verifyWebhook, type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import {
+  verifyWebhook,
+  type StripeEnv,
+  createStripeClient,
+  resolvePaymentsEnv,
+} from "@/lib/stripe.server";
 
 async function getAdmin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin as any;
+}
+
+/**
+ * Claim an event id. Returns false when this event was already processed, so a
+ * Stripe redelivery (which happens on every non-2xx, and spontaneously) can
+ * never re-run a non-idempotent side effect such as crediting the fund.
+ */
+async function claimEvent(eventId: string, type: string, env: StripeEnv): Promise<boolean> {
+  const admin = await getAdmin();
+  const { error } = await admin
+    .from("stripe_webhook_events")
+    .insert({ event_id: eventId, type, environment: env });
+  if (!error) return true;
+  // 23505 = unique_violation → we have seen this event before.
+  if (error.code === "23505") return false;
+  throw new Error(`Could not record webhook event: ${error.message}`);
+}
+
+/** Undo a claim so a failed event can be retried by Stripe. */
+async function releaseEvent(eventId: string): Promise<void> {
+  try {
+    const admin = await getAdmin();
+    await admin.from("stripe_webhook_events").delete().eq("event_id", eventId);
+  } catch (error) {
+    console.error("Could not release webhook event claim", eventId, error);
+  }
 }
 
 // ------- Entitlement helpers -------
@@ -19,13 +50,9 @@ async function revokeRole(admin: any, userId: string, role: "supporter" | "regis
 
 async function creditFund(admin: any, deltaCents: number, note: string, meta: any) {
   if (!deltaCents) return;
-  // Read-modify-write; single-row table
-  const { data } = await admin.from("community_fund").select("total_cents").eq("id", true).single();
-  const current = Number(data?.total_cents ?? 0);
-  await admin
-    .from("community_fund")
-    .update({ total_cents: current + deltaCents, updated_at: new Date().toISOString() })
-    .eq("id", true);
+  // Atomic increment — a read-modify-write here loses concurrent donations.
+  const { error } = await admin.rpc("credit_community_fund", { p_delta_cents: deltaCents });
+  if (error) throw new Error(`Could not credit community fund: ${error.message}`);
   await admin.from("admin_activity").insert({
     kind: "fund_credit",
     message: `${deltaCents >= 0 ? "Credited" : "Debited"} ${(deltaCents / 100).toFixed(2)} USD — ${note}`,
@@ -153,7 +180,8 @@ async function handleCheckoutSessionCompleted(
         payment_method_type: methodType,
         environment: env,
       })
-      .eq("id", pledgeId);
+      .eq("id", pledgeId)
+      .neq("status", "refunded");
 
     // Backing a pool with $5 or more grants membership (supporter role).
     const backerUserId = session.metadata?.user_id;
@@ -208,6 +236,15 @@ async function handleCheckoutSessionCompleted(
   )
     kind = "registry";
 
+  // Was this session already credited to the fund? Guards redeliveries that
+  // predate the event ledger, and two distinct events touching one session.
+  const { data: priorPurchase } = await admin
+    .from("purchases")
+    .select("credited_to_fund")
+    .eq("stripe_checkout_session_id", session.id)
+    .maybeSingle();
+  const alreadyCredited = !!priorPurchase?.credited_to_fund;
+
   await admin.from("purchases").upsert(
     {
       user_id: userId ?? null,
@@ -240,7 +277,7 @@ async function handleCheckoutSessionCompleted(
   }
 
   // Donations: credit the community fund (net of Stripe fees when available)
-  if (kind === "donation") {
+  if (kind === "donation" && !alreadyCredited) {
     const credit = netCents ?? amount;
     await admin
       .from("purchases")
@@ -325,6 +362,14 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
   const admin = await getAdmin();
   const stripe = createStripeClient(stripeEnvKey);
 
+  // Guard the fund credit against redelivery of this invoice.
+  const { data: priorPurchase } = await admin
+    .from("purchases")
+    .select("credited_to_fund")
+    .eq("stripe_payment_intent_id", paymentIntentId)
+    .maybeSingle();
+  const alreadyCredited = !!priorPurchase?.credited_to_fund;
+
   // Pull userId from the subscription (most reliable place we set it)
   const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
   const userId = sub.metadata?.userId ?? null;
@@ -381,7 +426,7 @@ async function handleInvoicePaid(invoice: any, env: StripeEnv, stripeEnvKey: Str
     return;
   }
 
-  if (fundCredit > 0) {
+  if (fundCredit > 0 && !alreadyCredited) {
     await creditFund(admin, fundCredit, "supporter membership (60% share)", {
       invoice_id: invoice.id,
       subscription_id: subscriptionId,
@@ -416,17 +461,20 @@ async function handlePledgeEvent(event: { type: string; data: { object: any } },
 
   switch (event.type) {
     case "payment_intent.succeeded":
+      // Never resurrect a refunded contribution: events can arrive out of order.
       await admin
         .from("pledges")
         .update({ status: "paid", stripe_payment_intent_id: obj.id, environment: env })
-        .eq("id", pledgeId);
+        .eq("id", pledgeId)
+        .neq("status", "refunded");
       break;
     case "payment_intent.canceled":
     case "payment_intent.payment_failed":
       await admin
         .from("pledges")
         .update({ status: event.type === "payment_intent.canceled" ? "cancelled" : "failed" })
-        .eq("id", pledgeId);
+        .eq("id", pledgeId)
+        .not("status", "in", "(paid,refunded)");
       break;
   }
 }
@@ -474,9 +522,30 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
         if (rawEnv !== "sandbox" && rawEnv !== "live") {
           return Response.json({ received: true, ignored: "invalid env" });
         }
+
+        // A sandbox event must never move state in a live deployment (or the
+        // reverse): a test-mode payment would otherwise grant a real entitlement.
+        // 200 so Stripe stops retrying an event we will never act on.
+        if (rawEnv !== resolvePaymentsEnv()) {
+          return Response.json({ received: true, ignored: "environment mismatch" });
+        }
+
         try {
           const event = await verifyWebhook(request, rawEnv);
-          await handleEvent(event, rawEnv);
+
+          if (!(await claimEvent(event.id, event.type, rawEnv))) {
+            return Response.json({ received: true, deduplicated: true });
+          }
+
+          try {
+            await handleEvent(event, rawEnv);
+          } catch (handlerError) {
+            // Release the claim so Stripe's retry is allowed to re-run this
+            // event; otherwise a transient failure would drop it permanently.
+            await releaseEvent(event.id);
+            throw handlerError;
+          }
+
           return Response.json({ received: true });
         } catch (e) {
           console.error("Webhook error", e);

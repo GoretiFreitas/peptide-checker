@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import ./scripts/register-ts-resolve.mjs --test \"src/**/*.test.ts\"",
+    "verify": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.6",

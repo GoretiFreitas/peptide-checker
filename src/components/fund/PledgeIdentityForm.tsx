@@ -25,7 +25,6 @@ export function PledgeIdentityForm({
     hide_amount?: boolean;
   };
 }) {
-
   const queryClient = useQueryClient();
   const updateFn = useServerFn(updatePledgeIdentity);
   const [handle, setHandle] = useState(initial?.x_handle ?? "");
@@ -94,7 +93,6 @@ export function PledgeIdentityForm({
     onError: (e: any) => setError(e?.message ?? "Could not update"),
   });
 
-
   const handleInput = (value: string) => {
     setHandle(
       value
@@ -114,7 +112,6 @@ export function PledgeIdentityForm({
           ? "Choose how you appear on this campaign's backer list. You can change this later while signed in."
           : "Choose how you appear on this campaign's backer list. We'll apply it to your contribution right after payment, and you can change it any time."}
       </p>
-
 
       <div className="mt-4 space-y-4">
         <div className="flex flex-wrap gap-4">
@@ -203,7 +200,6 @@ export function PledgeIdentityForm({
               : "Saved — this will be applied to your contribution after payment."}
           </div>
         )}
-
 
         <button
           onClick={() => mutation.mutate()}

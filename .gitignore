@@ -3,6 +3,13 @@ node_modules/
 .bun/
 .pnp
 .pnp.js
+# npm is the package manager for this project; package-lock.json is the single
+# source of truth. A second lockfile lets another resolver produce a different
+# dependency tree from the same package.json.
+bun.lock
+bun.lockb
+pnpm-lock.yaml
+yarn.lock
 
 # Build Outputs & Frameworks
 dist/

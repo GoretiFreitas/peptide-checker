@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { createStripeClient, getStripeErrorMessage, resolvePaymentsEnv } from "@/lib/stripe.server";
 import { computeFundingTotals } from "@/lib/board-totals.server";
 import { fetchProfileHandles, listCampaignBackers } from "@/lib/profiles.server";
 
@@ -228,7 +228,6 @@ export const updatePledgeIdentity = createServerFn({ method: "POST" })
     return updated as any;
   });
 
-
 export const createPledgeCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
@@ -237,13 +236,15 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
         item_id: z.string().uuid(),
         amount_cents: z.number().int().min(500).max(500000),
         return_url: z.string().url(),
-        environment: z.enum(["sandbox", "live"]),
         us_shipping_ack: z.boolean().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<{ clientSecret: string } | { error: string }> => {
     try {
+      // Never from the client: a caller who can pick "sandbox" could pay with a
+      // test card and still be granted a real membership.
+      const environment = resolvePaymentsEnv();
       // Verify item is in a fundable state
       const { data: item } = await (context.supabase.from("board_items") as any)
         .select("id, state, product_name, us_only, lab")
@@ -268,7 +269,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
           user_id: context.userId,
           amount_cents: data.amount_cents,
           status: "pending",
-          environment: data.environment,
+          environment,
           backer_email: user?.email ?? null,
         })
         .select("id")
@@ -276,7 +277,7 @@ export const createPledgeCheckout = createServerFn({ method: "POST" })
       if (insertErr || !pledge)
         return { error: insertErr?.message ?? "Could not create contribution" };
 
-      const stripe = createStripeClient(data.environment as StripeEnv);
+      const stripe = createStripeClient(environment);
 
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -331,7 +332,6 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
     z
       .object({
         session_id: z.string().min(10).max(200),
-        environment: z.enum(["sandbox", "live"]),
       })
       .parse(d),
   )
@@ -347,7 +347,8 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
       error?: string;
     }> => {
       try {
-        const stripe = createStripeClient(data.environment as StripeEnv);
+        const environment = resolvePaymentsEnv();
+        const stripe = createStripeClient(environment);
         const session = await stripe.checkout.sessions.retrieve(data.session_id);
         const meta = (session.metadata ?? {}) as Record<string, string>;
         if (meta.user_id !== context.userId) {
@@ -388,7 +389,7 @@ export const confirmPledgeSession = createServerFn({ method: "POST" })
               stripe_payment_intent_id: paymentIntentId,
               backer_email: session.customer_details?.email ?? null,
               payment_method_type: methodType,
-              environment: data.environment,
+              environment,
             })
             .eq("id", meta.pledge_id)
             .neq("status", "refunded");
@@ -688,4 +689,3 @@ export const isAdmin = createServerFn({ method: "GET" })
       .maybeSingle();
     return { admin: !!data };
   });
-

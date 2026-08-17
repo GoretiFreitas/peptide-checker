@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PeptidesCheck">
+  <defs>
+    <linearGradient id="gold" x1="12" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EFD1B2"/>
+      <stop offset="0.45" stop-color="#CFA079"/>
+      <stop offset="1" stop-color="#A9784F"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="26" y1="20" x2="40" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F2E3D6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rose-gold hexagon frame, echoing the brand mark -->
+  <path
+    d="M32 2.5 55.5 16v32L32 61.5 8.5 48V16z"
+    fill="url(#gold)"/>
+  <path
+    d="M32 9.5 49.5 19.6v20.8L32 50.5 14.5 40.4V19.6z"
+    fill="#FDF6EF"/>
+
+  <!-- Vial -->
+  <rect x="27" y="14.5" width="10" height="5" rx="1.6" fill="url(#gold)"/>
+  <path
+    d="M28.4 20.5h7.2v18.2a3.6 3.6 0 0 1-3.6 3.6h0a3.6 3.6 0 0 1-3.6-3.6z"
+    fill="url(#glass)" stroke="#C79A70" stroke-width="1.2" stroke-linejoin="round"/>
+
+  <!-- Molecule on the label -->
+  <g fill="#3A2E26">
+    <circle cx="32" cy="30.4" r="2.5"/>
+    <circle cx="27.6" cy="34.6" r="1.7"/>
+    <circle cx="36.3" cy="34.6" r="1.7"/>
+  </g>
+  <g stroke="#3A2E26" stroke-width="1.1">
+    <line x1="32" y1="30.4" x2="27.6" y2="34.6"/>
+    <line x1="32" y1="30.4" x2="36.3" y2="34.6"/>
+  </g>
+</svg>

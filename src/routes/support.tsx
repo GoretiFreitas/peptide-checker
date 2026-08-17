@@ -128,7 +128,7 @@ function SupportPage() {
   })();
   const purchasesQ = useQuery({
     queryKey: ["my-purchases", userId, env],
-    queryFn: () => getMyPurchases({ data: { environment: env } }),
+    queryFn: () => getMyPurchases(),
     enabled: !!userId,
   });
 
@@ -168,9 +168,8 @@ function SupportPage() {
     }
     setSelecting(priceId);
     try {
-      const env = getStripeEnvironment();
       const returnUrl = `${window.location.origin}/support?checkout=success`;
-      const res = await createSupportCheckout({ data: { priceId, returnUrl, environment: env } });
+      const res = await createSupportCheckout({ data: { priceId, returnUrl } });
       if ("error" in res) throw new Error(res.error);
       setClientSecret(res.clientSecret);
     } catch (e) {
@@ -181,9 +180,8 @@ function SupportPage() {
 
   const openPortal = async () => {
     try {
-      const env = getStripeEnvironment();
       const returnUrl = `${window.location.origin}/support`;
-      const res = await createPortalSession({ data: { returnUrl, environment: env } });
+      const res = await createPortalSession({ data: { returnUrl } });
       if ("error" in res) throw new Error(res.error);
       window.open(res.url, "_blank");
     } catch (e) {
@@ -313,7 +311,7 @@ function SupportPage() {
           purchasesQ.data &&
           "purchases" in purchasesQ.data &&
           purchasesQ.data.purchases.length > 0 && (
-            <PurchaseHistory rows={purchasesQ.data.purchases as PurchaseRow[]} env={env} />
+            <PurchaseHistory rows={purchasesQ.data.purchases as PurchaseRow[]} />
           )}
 
         <p className="mt-16 text-xs text-muted-foreground">
@@ -338,12 +336,12 @@ type PurchaseRow = {
   refunded_cents: number;
 };
 
-function PurchaseHistory({ rows, env }: { rows: PurchaseRow[]; env: "sandbox" | "live" }) {
+function PurchaseHistory({ rows }: { rows: PurchaseRow[] }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const openReceipt = async (purchaseId: string) => {
     setLoadingId(purchaseId);
     try {
-      const res = await getReceiptUrl({ data: { purchaseId, environment: env } });
+      const res = await getReceiptUrl({ data: { purchaseId } });
       if ("url" in res) window.open(res.url, "_blank");
       else alert(res.error);
     } finally {

@@ -71,8 +71,10 @@ export function computeFlags(e: ExtractedCertificate, f: FieldResults): Flag[] {
     });
   }
 
-  // Missing-test flags
-  if (f.identity === "not tested" || f.identity === "unknown") {
+  // Missing-test flags.
+  // `scoreIdentity` only ever returns pass | fail | unknown, so "unknown" is
+  // the single case that means "no usable identity test was reported".
+  if (f.identity === "unknown") {
     flags.push({
       level: "high",
       message:
@@ -115,16 +117,39 @@ export function computeFlags(e: ExtractedCertificate, f: FieldResults): Flag[] {
   return flags;
 }
 
+/**
+ * Endotoxin values only ever push a certificate to "Failed", so the bar is set
+ * deliberately high. USP <85> parenteral limits are commonly around 0.5 EU/mg,
+ * but this tool reads documents rather than testing product: it flags a hard
+ * failure only at ten times that limit — a figure no compliant certificate
+ * would ever report — and leaves everything below it to the flag system.
+ */
+const ENDOTOXIN_FAIL_THRESHOLD_EU = 5;
+
+/** A number that is directly attached to an endotoxin unit, e.g. "0.12 EU/mg". */
+const ENDOTOXIN_VALUE_WITH_UNIT = /([0-9]+(?:\.[0-9]+)?)\s*(?:eu|iu)\s*\/\s*(?:mg|ml|l)\b/;
+
+/** Upper-bound or qualitative results, which cannot exceed a threshold. */
+const ENDOTOXIN_QUALITATIVE = /\b(pass(?:e[sd])?|complies|conforms|negative|not detected|nd)\b/i;
+
 function endotoxinExceedsLimit(e: ExtractedCertificate): boolean {
-  const raw = `${e.endotoxins.result} ${e.endotoxins.units}`.toLowerCase();
-  if (!isReported(e.endotoxins.result)) return false;
-  // Pull first numeric value; USP <85> limit for parenteral is commonly <0.5 EU/mg for many peptides.
-  const m = raw.match(/([0-9]+(?:\.[0-9]+)?)/);
-  if (!m) return false;
-  const value = parseFloat(m[1]);
-  // Only treat as fail if units clearly indicate EU/mg or EU/ml AND value > 5 (a very permissive floor).
-  if (/(eu\s*\/\s*mg|eu\s*\/\s*ml|iu\s*\/\s*mg)/.test(raw) && value > 5) return true;
-  return false;
+  const result = e.endotoxins.result.trim();
+  if (!isReported(result)) return false;
+
+  // "<0.5 EU/mg" and "Pass" are statements that the limit was met.
+  if (/^[<≤]/.test(result)) return false;
+  if (ENDOTOXIN_QUALITATIVE.test(result)) return false;
+
+  // Read the number attached to the unit rather than the first number in the
+  // string: certificates routinely quote the standard or the limit alongside
+  // the result (e.g. "0.12 EU/mg, limit 0.5 per USP <85>").
+  const raw = `${result} ${e.endotoxins.units}`.toLowerCase();
+  const match = raw.match(ENDOTOXIN_VALUE_WITH_UNIT);
+  if (!match) return false;
+
+  const value = parseFloat(match[1]);
+  if (Number.isNaN(value)) return false;
+  return value > ENDOTOXIN_FAIL_THRESHOLD_EU;
 }
 
 export function computeVerdict(e: ExtractedCertificate, f: FieldResults, flags: Flag[]): Verdict {

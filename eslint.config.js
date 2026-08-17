@@ -33,7 +33,19 @@ export default tseslint.config(
         },
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": "off",
+
+      // Tracked debt, deliberately a warning rather than an error: ~100 call
+      // sites cast Supabase queries to `any`, and turning that into a hard
+      // failure today would either block CI or force a large untested
+      // refactor. Warnings keep them visible; new code should not add more.
+      "@typescript-eslint/no-explicit-any": "warn",
+
+      // Was "off", which hid genuinely dead bindings. Warn, with the usual
+      // underscore escape hatch for intentionally unused parameters.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
     },
   },
   eslintPluginPrettier,

@@ -11,7 +11,7 @@ import {
 } from "@/lib/board.functions";
 
 import { SiteHeader } from "@/components/SiteHeader";
-import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
+import { getStripe } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/hooks/useMembership";
 import { BackerList } from "@/components/fund/BackerList";
@@ -98,10 +98,8 @@ function ItemDetail() {
   });
   const identity = identityQuery.data as any;
 
-
   const storageKey = `pledge_session_${itemId}`;
   const draftKey = `pledge_identity_${itemId}`;
-
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
@@ -117,7 +115,7 @@ function ItemDetail() {
     const sid = returnedSession ?? stored;
     if (!sid) return;
     setConfirming(true);
-    confirmPledgeSession({ data: { session_id: sid, environment: getStripeEnvironment() } })
+    confirmPledgeSession({ data: { session_id: sid } })
       .then((res) => {
         if (cancelled) return;
         if (res.paid) {
@@ -151,7 +149,6 @@ function ItemDetail() {
           }
           query.refetch();
         }
-
       })
       .catch(() => {})
       .finally(() => !cancelled && setConfirming(false));
@@ -168,7 +165,6 @@ function ItemDetail() {
           item_id: itemId,
           amount_cents: amount,
           return_url: `${window.location.origin}/fund/${itemId}?pledged=1&session_id={CHECKOUT_SESSION_ID}`,
-          environment: getStripeEnvironment(),
         },
       });
       if ("error" in res) throw new Error(res.error);
@@ -310,7 +306,6 @@ function ItemDetail() {
             }}
           />
         )}
-
 
         {!fundable && !isMember && (
           <div className="mt-6 rounded-md border border-border bg-card p-5">

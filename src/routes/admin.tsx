@@ -12,7 +12,6 @@ import {
 import { applyStripeTaxCodes } from "@/lib/payments.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getStripeEnvironment } from "@/lib/stripe-client";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -352,7 +351,7 @@ function TaxCodesButton() {
     setBusy(true);
     setState(null);
     try {
-      const res = await applyStripeTaxCodes({ data: { environment: getStripeEnvironment() } });
+      const res = await applyStripeTaxCodes();
       if ("error" in res) setState({ msg: res.error, ok: false });
       else setState({ msg: `Updated ${res.updated.length} product(s).`, ok: true });
     } finally {

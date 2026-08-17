@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getBoard, getFundTotal, getItem, createPledgeCheckout } from "@/lib/board.functions";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getStripe, getStripeEnvironment } from "@/lib/stripe-client";
+import { getStripe } from "@/lib/stripe-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useMembership } from "@/hooks/useMembership";
 
@@ -73,7 +73,7 @@ function tiersFor(lab: string): Tier[] {
   return lab === "finnrick" ? FINNRICK_TIERS : JANOSHIK_TIERS;
 }
 
-function labBadge(lab: string, us_only: boolean) {
+function labBadge(lab: string, _us_only: boolean) {
   if (lab === "finnrick") return { label: "Finnrick · US only", tone: "us" as const };
   return { label: "Janoshik · ships worldwide", tone: "intl" as const };
 }
@@ -613,7 +613,6 @@ function PledgeModal({ itemId, onClose }: { itemId: string; onClose: () => void 
           item_id: itemId,
           amount_cents: amount,
           return_url: `${window.location.origin}/fund/${itemId}?pledged=1`,
-          environment: getStripeEnvironment(),
           us_shipping_ack: usOnly ? usAck : undefined,
         },
       });

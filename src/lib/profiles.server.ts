@@ -58,4 +58,3 @@ export async function listCampaignBackers(itemId: string): Promise<CampaignBacke
     };
   });
 }
-
