@@ -213,6 +213,7 @@ export type Database = {
           amount_cents: number
           backer_email: string | null
           created_at: string
+          display_initials: string | null
           display_mode: string
           environment: string
           hide_amount: boolean
@@ -233,6 +234,7 @@ export type Database = {
           amount_cents: number
           backer_email?: string | null
           created_at?: string
+          display_initials?: string | null
           display_mode?: string
           environment?: string
           hide_amount?: boolean
@@ -253,6 +255,7 @@ export type Database = {
           amount_cents?: number
           backer_email?: string | null
           created_at?: string
+          display_initials?: string | null
           display_mode?: string
           environment?: string
           hide_amount?: boolean
