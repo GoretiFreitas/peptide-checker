@@ -226,10 +226,12 @@ function ItemDetail() {
               {item.batch_id ? ` · batch ${item.batch_id}` : ""}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--badge-pass-fg)]">
-              You contributed {paidAmount ? money(paidAmount) : money(amount)}. If this batch reaches
-              its {money(goal)} goal, it goes to an independent lab and results are published for
-              every backer. If the goal is not met by the deadline, your contribution rolls over to
-              the most-backed active campaign.
+              {paidAmount ? `You contributed ${money(paidAmount)}. ` : "Your contribution is recorded. "}
+              {goal > 0
+                ? `If this batch reaches its ${money(goal)} goal, it goes to an independent lab and results are published for every backer.`
+                : "Once this batch is fully funded, it goes to an independent lab and results are published for every backer."}{" "}
+              If the goal is not met by the deadline, your contribution rolls over to the most-backed
+              active campaign.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
@@ -263,10 +265,7 @@ function ItemDetail() {
         )}
 
         {(paidAmount !== null || justPledged) && signedIn && pledgeId && (
-          <PledgeIdentityForm
-            pledgeId={pledgeId}
-            initial={{ display_mode: "initials", hide_amount: false }}
-          />
+          <PledgeIdentityForm pledgeId={pledgeId} />
         )}
 
         {!fundable && !isMember && (

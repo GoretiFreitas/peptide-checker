@@ -150,6 +150,25 @@ const handleSchema = z
   .or(z.literal("")
 );
 
+export const getPledgeIdentity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ pledge_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row } = await (context.supabase as any)
+      .from("pledges")
+      .select("id, x_handle, display_mode, display_initials, hide_amount")
+      .eq("id", data.pledge_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    return (row ?? null) as {
+      id: string;
+      x_handle: string | null;
+      display_mode: "handle" | "initials" | "anonymous";
+      display_initials: string | null;
+      hide_amount: boolean;
+    } | null;
+  });
+
 export const updatePledgeIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -157,6 +176,7 @@ export const updatePledgeIdentity = createServerFn({ method: "POST" })
       .object({
         pledge_id: z.string().uuid(),
         x_handle: handleSchema,
+        display_initials: z.string().max(4).optional().or(z.literal("")),
         display_mode: z.enum(["handle", "initials", "anonymous"]),
         hide_amount: z.boolean().default(false),
       })
@@ -167,18 +187,31 @@ export const updatePledgeIdentity = createServerFn({ method: "POST" })
     if (handle && (handle.length < 1 || handle.length > 15 || !/^[a-zA-Z0-9_]+$/.test(handle))) {
       throw new Error("Invalid X handle");
     }
-    const { error } = await context.supabase
+    const initials = (data.display_initials ?? "")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 3)
+      .toUpperCase();
+    if (data.display_mode === "handle" && !handle) {
+      throw new Error("Add your X username to display it on the backer list");
+    }
+    const { data: rows, error } = await (context.supabase as any)
       .from("pledges")
       .update({
         x_handle: handle || null,
+        display_initials: initials || null,
         display_mode: data.display_mode,
         hide_amount: data.hide_amount,
       })
       .eq("id", data.pledge_id)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.userId)
+      .select("id");
     if (error) throw new Error(error.message);
+    if (!rows || rows.length === 0) {
+      throw new Error("Could not save — this contribution was not found on your account.");
+    }
     return { ok: true };
   });
+
 
 export const createPledgeCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
