@@ -25,7 +25,7 @@ type OAuthNs = {
     error: { message: string } | null;
   }>;
 };
-const oauthApi = (supabase.auth as unknown as { oauth: OAuthNs }).oauth;
+const getOAuthApi = () => (supabase.auth as unknown as { oauth: OAuthNs }).oauth;
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
